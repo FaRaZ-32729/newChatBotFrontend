@@ -129,7 +129,18 @@ export default function UsersTable({
                 <div key={user.id} className="p-4 flex flex-col gap-2.5 bg-white hover:bg-slate-50/50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="cursor-pointer flex-1 group" onClick={() => handleViewDetails(user.id)}>
-                      <p className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 group-hover:underline transition-colors">{user.name}</p>
+                      <p className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 group-hover:underline transition-colors flex items-center gap-2">
+                        <span>{user.name}</span>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${
+                          user.role === 'admin'
+                            ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                            : user.role === 'manager'
+                              ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}>
+                          {user.role || 'user'}
+                        </span>
+                      </p>
                       <p className="text-xs text-slate-500 font-mono mt-0.5">{user.email}</p>
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {(Array.isArray(user.access) ? user.access : [user.access || 'Head Movement']).map((acc, idx) => (
@@ -211,7 +222,18 @@ export default function UsersTable({
                           <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-xs uppercase group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all shrink-0">
                             {user.name.charAt(0)}
                           </div>
-                          <span className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 group-hover:underline transition-all truncate" title={user.name}>{user.name}</span>
+                          <div className="flex items-center gap-2 overflow-hidden truncate">
+                            <span className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 group-hover:underline transition-all truncate" title={user.name}>{user.name}</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border shrink-0 ${
+                              user.role === 'admin'
+                                ? 'bg-rose-50 text-rose-700 border-rose-100'
+                                : user.role === 'manager'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-100'
+                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}>
+                              {user.role || 'user'}
+                            </span>
+                          </div>
                         </div>
                       </td>
 

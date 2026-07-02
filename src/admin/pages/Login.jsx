@@ -58,6 +58,18 @@ export default function Login() {
     if (role === 'admin') {
       setEmail('admin@chatbot.com');
       setPassword('password123');
+    } else if (role === 'manager_null') {
+      setEmail('manager_null@chatbot.com');
+      setPassword('password123');
+    } else if (role === 'manager_head') {
+      setEmail('manager_head@chatbot.com');
+      setPassword('password123');
+    } else if (role === 'manager_hand') {
+      setEmail('manager_hand@chatbot.com');
+      setPassword('password123');
+    } else if (role === 'manager_both') {
+      setEmail('manager_both@chatbot.com');
+      setPassword('password123');
     } else if (role === 'manager') {
       setEmail('manager@chatbot.com');
       setPassword('password123');
@@ -67,8 +79,9 @@ export default function Login() {
         const saved = localStorage.getItem('chatbot_users');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed && parsed.length > 0) {
-            setEmail(parsed[0].email);
+          const firstClient = parsed.find(u => u.role === 'user');
+          if (firstClient) {
+            setEmail(firstClient.email);
             setPassword('password123');
             return;
           }
@@ -176,31 +189,80 @@ export default function Login() {
               <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
               Quick-Fill Sandbox Access
             </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={() => prefill('admin')}
-                className="py-2.5 px-2 bg-slate-950 hover:bg-indigo-950/20 border border-slate-800/80 hover:border-indigo-500/30 rounded-xl text-[10px] text-slate-400 hover:text-white font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Fill Admin
-              </button>
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={() => prefill('manager')}
-                className="py-2.5 px-2 bg-slate-950 hover:bg-indigo-950/20 border border-slate-800/80 hover:border-indigo-500/30 rounded-xl text-[10px] text-slate-400 hover:text-white font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Fill Manager
-              </button>
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={() => prefill('user')}
-                className="py-2.5 px-2 bg-slate-950 hover:bg-indigo-950/20 border border-slate-800/80 hover:border-indigo-500/30 rounded-xl text-[10px] text-slate-400 hover:text-white font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Fill Client
-              </button>
+            
+            <div className="space-y-3">
+              {/* Main Roles */}
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => prefill('admin')}
+                  className="py-2.5 px-2 bg-slate-950 hover:bg-indigo-950/20 border border-slate-800/80 hover:border-indigo-500/30 rounded-xl text-[10px] text-slate-400 hover:text-white font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Fill Admin
+                </button>
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => prefill('manager')}
+                  className="py-2.5 px-2 bg-slate-950 hover:bg-indigo-950/20 border border-slate-800/80 hover:border-indigo-500/30 rounded-xl text-[10px] text-slate-400 hover:text-white font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Fill Manager
+                </button>
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => prefill('user')}
+                  className="py-2.5 px-2 bg-slate-950 hover:bg-indigo-950/20 border border-slate-800/80 hover:border-indigo-500/30 rounded-xl text-[10px] text-slate-400 hover:text-white font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Fill Client
+                </button>
+              </div>
+
+              {/* Specific Manager Movement Permission Variants */}
+              <div>
+                <p className="text-[9px] text-slate-600 mb-1.5 font-semibold uppercase tracking-widest text-center">
+                  Manager Movement Permutations:
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => prefill('manager_null')}
+                    className="py-2 px-1.5 bg-slate-950/60 hover:bg-indigo-950/10 border border-slate-850 hover:border-indigo-500/20 rounded-lg text-[9px] text-slate-500 hover:text-white transition-all cursor-pointer"
+                    title="No movement permissions"
+                  >
+                    Mgr (Null Access)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => prefill('manager_head')}
+                    className="py-2 px-1.5 bg-slate-950/60 hover:bg-indigo-950/10 border border-slate-850 hover:border-indigo-500/20 rounded-lg text-[9px] text-slate-500 hover:text-white transition-all cursor-pointer"
+                    title="Head Movement only"
+                  >
+                    Mgr (Head Only)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => prefill('manager_hand')}
+                    className="py-2 px-1.5 bg-slate-950/60 hover:bg-indigo-950/10 border border-slate-850 hover:border-indigo-500/20 rounded-lg text-[9px] text-slate-500 hover:text-white transition-all cursor-pointer"
+                    title="Hand Movement only"
+                  >
+                    Mgr (Hand Only)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => prefill('manager_both')}
+                    className="py-2 px-1.5 bg-slate-950/60 hover:bg-indigo-950/10 border border-slate-850 hover:border-indigo-500/20 rounded-lg text-[9px] text-slate-500 hover:text-white transition-all cursor-pointer"
+                    title="Both Head & Hand Movements"
+                  >
+                    Mgr (Both Mov.)
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

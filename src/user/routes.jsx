@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import UserHome from './pages/UserHome';
+import ChatbotView from './pages/ChatbotView';
 import Login from '../admin/pages/Login';
 
 export default function UserRoutes() {
@@ -7,6 +8,7 @@ export default function UserRoutes() {
     <Routes>
       <Route path="login" element={<Login />} />
       <Route path="" element={<UserHome />} />
+      <Route path="chatbot/:chatbotId" element={<ChatbotView />} />
       {/* Fallback back to user index or redirect */}
       <Route path="*" element={<Navigate to="" replace />} />
     </Routes>

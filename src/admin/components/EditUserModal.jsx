@@ -6,6 +6,7 @@ export default function EditUserModal({ user, onClose }) {
   const { updateUser } = useAdmin();
 
   const [editUserName, setEditUserName] = useState(user.name);
+  const [editUserRole, setEditUserRole] = useState(user.role || 'user');
   const [editUserStatus, setEditUserStatus] = useState(user.status);
   const [editUserAccess, setEditUserAccess] = useState(
     Array.isArray(user.access)
@@ -37,6 +38,7 @@ export default function EditUserModal({ user, onClose }) {
 
     updateUser(user.id, {
       name: editUserName.trim(),
+      role: editUserRole,
       status: editUserStatus,
       statusReason: editUserStatus === 'inactive' ? editStatusReason.trim() : '',
       access: editUserAccess
@@ -100,6 +102,22 @@ export default function EditUserModal({ user, onClose }) {
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          {/* Edit Role */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              System Role
+            </label>
+            <select
+              value={editUserRole}
+              onChange={(e) => setEditUserRole(e.target.value)}
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-800 bg-white"
+            >
+              <option value="user">User / Client</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Administrator</option>
             </select>
           </div>
 

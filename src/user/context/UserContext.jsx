@@ -28,6 +28,46 @@ export function UserProvider({ children }) {
     }
   }, [users]);
 
+  // Store all chatbots to keep state synced across the application
+  const [chatbots, setChatbots] = useState(() => {
+    const saved = localStorage.getItem('chatbot_list');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return [];
+      }
+    }
+    // Pre-populate with a gorgeous default chatbot if empty
+    return [
+      {
+        id: 'bot_default_1',
+        name: 'OmniSphere Assistant',
+        onboardingImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80',
+        knowledgeBasePdf: 'omnisphere_manual.pdf',
+        activationKey: 'wave',
+        specificInstructions: 'Act as a premium, highly intellectual concierge. Wave your hand gracefully whenever greeted or activated.',
+        createdBy: 'manager@chatbot.com',
+        createdAt: '2026-07-02'
+      }
+    ];
+  });
+
+  // Keep chatbots synchronized with localStorage
+  useEffect(() => {
+    localStorage.setItem('chatbot_list', JSON.stringify(chatbots));
+  }, [chatbots]);
+
+  // Create chatbot helper
+  const createChatbot = (newBot) => {
+    setChatbots(prev => [newBot, ...prev]);
+  };
+
+  // Delete chatbot helper
+  const deleteChatbot = (botId) => {
+    setChatbots(prev => prev.filter(b => b.id !== botId));
+  };
+
   // Handle User Login
   const loginUser = (email) => {
     // Re-fetch users from localStorage to make sure we have the latest from admin changes
@@ -175,6 +215,7 @@ export function UserProvider({ children }) {
       name: name.trim(),
       email: email.trim().toLowerCase(),
       status: 'active',
+      role: 'user',
       access: ['Head Movement'],
       conversations: 0,
       lastActive: 'Never',
@@ -202,7 +243,10 @@ export function UserProvider({ children }) {
       addActivationKey,
       removeActivationKey,
       updateInstructions,
-      registerUser
+      registerUser,
+      chatbots,
+      createChatbot,
+      deleteChatbot
     }}>
       {children}
     </UserContext.Provider>

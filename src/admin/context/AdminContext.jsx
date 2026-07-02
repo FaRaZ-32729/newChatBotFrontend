@@ -21,7 +21,8 @@ export function AdminProvider({ children }) {
     const parsed = saved ? JSON.parse(saved) : INITIAL_USERS;
     return parsed.map(u => ({
       ...u,
-      access: Array.isArray(u.access) ? u.access : [u.access || 'Head Movement'],
+      role: u.role || 'user',
+      access: Array.isArray(u.access) ? u.access : (u.access ? [u.access] : []),
       activationKeys: u.activationKeys || ['salam', 'hello', 'hay'],
       knowledgeBase: u.knowledgeBase || [
         { name: 'general_faq.pdf', size: '1.2 MB', uploadedAt: '2026-06-15' },
@@ -48,52 +49,7 @@ export function AdminProvider({ children }) {
   const login = (email, password) => {
     const cleanEmail = email.trim().toLowerCase();
     
-    // 1. Admin Role
-    if (cleanEmail === 'admin@chatbot.com') {
-      if (password === 'password123') {
-        setIsLoggedIn(true);
-        setLoginError('');
-        localStorage.setItem('admin_logged_in', 'true');
-        
-        const adminProfile = { email: cleanEmail, role: 'admin', name: 'System Admin' };
-        localStorage.setItem('logged_in_user', JSON.stringify(adminProfile));
-        localStorage.removeItem('current_user'); // Clear user hub session if any
-        
-        showToast('Successfully logged in as administrator!');
-        return { success: true, role: 'admin', redirect: '/admin/dashboard' };
-      } else {
-        setLoginError('Invalid password for administrator.');
-        return { success: false };
-      }
-    }
-    
-    // 2. Manager Role
-    if (cleanEmail === 'manager@chatbot.com') {
-      if (password === 'password123') {
-        setIsLoggedIn(false);
-        localStorage.removeItem('admin_logged_in');
-        setLoginError('');
-        
-        const managerProfile = { 
-          id: 'mgr_1',
-          email: cleanEmail, 
-          role: 'manager', 
-          name: 'Manager User',
-          access: ['Head Movement', 'Hand Movement'],
-          status: 'active'
-        };
-        localStorage.setItem('logged_in_user', JSON.stringify(managerProfile));
-        localStorage.setItem('current_user', JSON.stringify(managerProfile));
-        
-        showToast('Successfully logged in as manager!');
-        return { success: true, role: 'manager', redirect: '/' };
-      } else {
-        setLoginError('Invalid password for manager.');
-        return { success: false };
-      }
-    }
-    
-    // 3. User Role (Lookup in users list)
+    // Check in local storage or state first to find matches for Admin, Managers, and Users
     const latestUsersSaved = localStorage.getItem('chatbot_users');
     const latestUsers = latestUsersSaved ? JSON.parse(latestUsersSaved) : users;
     const userProfile = latestUsers.find(u => u.email.trim().toLowerCase() === cleanEmail);
@@ -105,23 +61,64 @@ export function AdminProvider({ children }) {
       }
       
       if (password === 'password123') {
-        setIsLoggedIn(false);
-        localStorage.removeItem('admin_logged_in');
+        const userRole = userProfile.role || 'user';
+        setIsLoggedIn(userRole === 'admin');
+        if (userRole === 'admin') {
+          localStorage.setItem('admin_logged_in', 'true');
+        } else {
+          localStorage.removeItem('admin_logged_in');
+        }
         setLoginError('');
         
-        const userWithRole = {
+        const profile = {
           ...userProfile,
-          role: 'user'
+          role: userRole
         };
-        localStorage.setItem('logged_in_user', JSON.stringify(userWithRole));
-        localStorage.setItem('current_user', JSON.stringify(userWithRole));
+        localStorage.setItem('logged_in_user', JSON.stringify(profile));
         
-        showToast(`Welcome back, ${userProfile.name}!`);
-        return { success: true, role: 'user', redirect: '/' };
+        if (userRole === 'admin') {
+          localStorage.removeItem('current_user'); // Clear user hub session if any
+          showToast('Successfully logged in as administrator!');
+          return { success: true, role: 'admin', redirect: '/admin/dashboard' };
+        } else {
+          localStorage.setItem('current_user', JSON.stringify(profile));
+          showToast(`Successfully logged in as ${userRole === 'manager' ? 'manager' : 'client'}!`);
+          return { success: true, role: userRole, redirect: '/' };
+        }
       } else {
-        setLoginError('Invalid password. For client user accounts, use "password123".');
+        setLoginError('Invalid password. For sandbox testing, use "password123".');
         return { success: false };
       }
+    }
+    
+    // Generic fallback for standard hardcoded accounts if somehow cleared from database
+    if (cleanEmail === 'admin@chatbot.com' && password === 'password123') {
+      setIsLoggedIn(true);
+      setLoginError('');
+      localStorage.setItem('admin_logged_in', 'true');
+      const adminProfile = { email: cleanEmail, role: 'admin', name: 'System Admin', access: ['Head Movement', 'Hand Movement'] };
+      localStorage.setItem('logged_in_user', JSON.stringify(adminProfile));
+      localStorage.removeItem('current_user');
+      showToast('Successfully logged in as administrator!');
+      return { success: true, role: 'admin', redirect: '/admin/dashboard' };
+    }
+    
+    if (cleanEmail === 'manager@chatbot.com' && password === 'password123') {
+      setIsLoggedIn(false);
+      localStorage.removeItem('admin_logged_in');
+      setLoginError('');
+      const managerProfile = { 
+        id: 'mgr_1',
+        email: cleanEmail, 
+        role: 'manager', 
+        name: 'Manager User',
+        access: ['Head Movement', 'Hand Movement'],
+        status: 'active'
+      };
+      localStorage.setItem('logged_in_user', JSON.stringify(managerProfile));
+      localStorage.setItem('current_user', JSON.stringify(managerProfile));
+      showToast('Successfully logged in as manager!');
+      return { success: true, role: 'manager', redirect: '/' };
     }
 
     setLoginError('Invalid email or password. Verify details and try again.');
