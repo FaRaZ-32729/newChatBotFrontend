@@ -33,7 +33,7 @@ export default function ClientsRegistry({
     try {
       const newUser = onRegisterUser(createUserName.trim(), createUserEmail.trim());
       if (newUser) {
-        setCreateUserSuccess(`Successfully registered client "${newUser.name}"!`);
+        setCreateUserSuccess(`Successfully registered "${newUser.name}"!`);
         setCreateUserName('');
         setCreateUserEmail('');
       } else {
@@ -53,12 +53,12 @@ export default function ClientsRegistry({
             <UserCheck className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white leading-snug">Manager Administration Console</h3>
-            <p className="text-xs text-slate-400 mt-0.5">As a Manager, you hold exclusive permission to register and monitor client user accounts.</p>
+            <h3 className="text-lg font-bold text-white leading-snug">User Administration</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Manage your user accounts below.</p>
           </div>
         </div>
         <span className="px-3 py-1 bg-indigo-600/20 border border-indigo-500/30 rounded-full text-xs font-bold text-indigo-300 shrink-0">
-          Managed Clients: {managedUsers.length}
+          Users: {managedUsers.length}
         </span>
       </div>
 
@@ -68,8 +68,8 @@ export default function ClientsRegistry({
         {/* Register User Panel */}
         <div className="bg-slate-950/60 border border-slate-850 p-5 rounded-2xl space-y-4 h-fit">
           <div>
-            <h4 className="text-sm font-extrabold text-white">Register New Client Account</h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">Instantly configure basic access keys for a new client user.</p>
+            <h4 className="text-sm font-extrabold text-white">Register New User</h4>
+            <p className="text-[11px] text-slate-500 mt-0.5">Add a new user to your list.</p>
           </div>
 
           {createUserError && (
@@ -90,7 +90,7 @@ export default function ClientsRegistry({
             {/* Field 1: Name */}
             <div>
               <label htmlFor="user-reg-name" className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">
-                Client Full Name
+                Name
               </label>
               <input
                 id="user-reg-name"
@@ -110,7 +110,7 @@ export default function ClientsRegistry({
             {/* Field 2: Email */}
             <div>
               <label htmlFor="user-reg-email" className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">
-                Client Email Address
+                Email Address
               </label>
               <input
                 id="user-reg-email"
@@ -132,7 +132,7 @@ export default function ClientsRegistry({
               type="submit"
               className="w-full flex justify-center items-center gap-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white rounded-xl shadow-lg transition-all cursor-pointer"
             >
-              <span>Deploy Client Account</span>
+              <span>Register User</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
@@ -141,15 +141,15 @@ export default function ClientsRegistry({
         {/* Managed Users Registry Table */}
         <div className="lg:col-span-2 space-y-3">
           <div>
-            <h4 className="text-sm font-extrabold text-white">Registered Client User Registry</h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">Below are the client user profiles deployed and managed under your license.</p>
+            <h4 className="text-sm font-extrabold text-white">Users List</h4>
+            <p className="text-[11px] text-slate-500 mt-0.5">Manage user profiles here.</p>
           </div>
 
           {managedUsers.length === 0 ? (
             <div className="py-12 px-4 text-center bg-slate-950/40 border border-dashed border-slate-800/80 rounded-2xl">
               <UserCheck className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-              <p className="text-xs font-semibold text-slate-400">No client accounts created yet</p>
-              <p className="text-[11px] text-slate-500 mt-1">Use the register form to create your first client configuration.</p>
+              <p className="text-xs font-semibold text-slate-400">No users found</p>
+              <p className="text-[11px] text-slate-500 mt-1">Use the form on the left to add your first user.</p>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-slate-850 bg-slate-950">
@@ -158,7 +158,7 @@ export default function ClientsRegistry({
                   <tr className="border-b border-slate-850 bg-slate-900/40 font-bold text-slate-400 uppercase tracking-wider text-[10px] font-mono">
                     <th className="p-4">Name</th>
                     <th className="p-4">Email</th>
-                    <th className="p-4">Access Protocol</th>
+                    <th className="p-4">Access</th>
                     <th className="p-4 text-center">Status</th>
                     <th className="p-4 text-center">Actions</th>
                   </tr>
@@ -197,7 +197,7 @@ export default function ClientsRegistry({
                           type="button"
                           onClick={() => onDeleteUser(u)}
                           className="p-1.5 bg-slate-950 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/20 rounded-xl transition-all cursor-pointer"
-                          title="Delete Client User"
+                          title="Delete User"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
