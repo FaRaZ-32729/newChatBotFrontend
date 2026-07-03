@@ -63,6 +63,11 @@ export function UserProvider({ children }) {
     setChatbots(prev => [newBot, ...prev]);
   };
 
+  // Update chatbot helper
+  const updateChatbot = (botId, updatedBot) => {
+    setChatbots(prev => prev.map(b => b.id === botId ? { ...b, ...updatedBot } : b));
+  };
+
   // Delete chatbot helper
   const deleteChatbot = (botId) => {
     setChatbots(prev => prev.filter(b => b.id !== botId));
@@ -231,6 +236,11 @@ export function UserProvider({ children }) {
     return newUser;
   };
 
+  // Delete user method
+  const deleteUser = (userId) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+  };
+
   return (
     <UserContext.Provider value={{
       currentUser,
@@ -246,7 +256,9 @@ export function UserProvider({ children }) {
       registerUser,
       chatbots,
       createChatbot,
-      deleteChatbot
+      updateChatbot,
+      deleteChatbot,
+      deleteUser
     }}>
       {children}
     </UserContext.Provider>

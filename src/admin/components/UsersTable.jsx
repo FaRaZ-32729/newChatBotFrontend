@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, Users, Eye, Pencil, Trash2 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 export default function UsersTable({ 
   searchQuery, 
@@ -12,6 +13,7 @@ export default function UsersTable({
 }) {
   const { users, deleteUser } = useAdmin();
   const navigate = useNavigate();
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
 
   // Filtered and searched users
   const filteredUsers = useMemo(() => {
@@ -189,7 +191,7 @@ export default function UsersTable({
 
                     {/* Delete */}
                     <button
-                      onClick={() => deleteUser(user.id, user.name)}
+                      onClick={() => setDeleteConfirmTarget({ id: user.id, name: user.name })}
                       className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
                       title="Delete user"
                     >
@@ -295,7 +297,7 @@ export default function UsersTable({
 
                           {/* Delete */}
                           <button
-                            onClick={() => deleteUser(user.id, user.name)}
+                            onClick={() => setDeleteConfirmTarget({ id: user.id, name: user.name })}
                             className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
                             title="Delete chat configuration"
                           >
@@ -312,6 +314,22 @@ export default function UsersTable({
           </>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={deleteConfirmTarget !== null}
+        title="Delete User Account"
+        message={`Are you sure you want to delete "${deleteConfirmTarget?.name}"? All associated virtual environments, customized parameters, and access permissions will be immediately purged.`}
+        confirmText="Confirm Delete"
+        cancelText="Cancel"
+        theme="light"
+        onConfirm={() => {
+          if (deleteConfirmTarget) {
+            deleteUser(deleteConfirmTarget.id, deleteConfirmTarget.name);
+            setDeleteConfirmTarget(null);
+          }
+        }}
+        onCancel={() => setDeleteConfirmTarget(null)}
+      />
 
     </section>
   );

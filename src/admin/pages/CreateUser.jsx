@@ -174,22 +174,7 @@ export default function CreateUser() {
                 )}
               </div>
 
-              {/* Form Field: User Role */}
-              <div>
-                <label htmlFor="new-role" className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  System Role <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  id="new-role"
-                  value={newUserRole}
-                  onChange={(e) => setNewUserRole(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-800 bg-white"
-                >
-                  <option value="user">User / Client</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Administrator</option>
-                </select>
-              </div>
+
 
               {/* Form Field: Access Control */}
               <div className="relative">

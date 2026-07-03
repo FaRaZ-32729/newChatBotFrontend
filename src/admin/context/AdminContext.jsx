@@ -18,7 +18,16 @@ export function AdminProvider({ children }) {
   // Users State
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem('chatbot_users');
-    const parsed = saved ? JSON.parse(saved) : INITIAL_USERS;
+    let parsed = saved ? JSON.parse(saved) : [...INITIAL_USERS];
+    
+    // Auto-merge any missing presets by email to prevent caching issues for new roles/managers
+    const existingEmails = new Set(parsed.map(u => u.email.toLowerCase().trim()));
+    const missingPresets = INITIAL_USERS.filter(u => !existingEmails.has(u.email.toLowerCase().trim()));
+    
+    if (missingPresets.length > 0) {
+      parsed = [...missingPresets, ...parsed];
+    }
+
     return parsed.map(u => ({
       ...u,
       role: u.role || 'user',
@@ -136,12 +145,9 @@ export function AdminProvider({ children }) {
 
   // Delete User
   const deleteUser = (userId, name) => {
-    if (confirm(`Are you sure you want to delete user ${name}?`)) {
-      setUsers(prev => prev.filter(u => u.id !== userId));
-      showToast(`User "${name}" has been deleted.`);
-      return true;
-    }
-    return false;
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    showToast(`User "${name}" has been deleted.`);
+    return true;
   };
 
   // Toggle Status Inline
