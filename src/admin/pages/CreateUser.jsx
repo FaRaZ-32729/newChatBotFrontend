@@ -83,7 +83,7 @@ export default function CreateUser() {
 
       {/* --- MAIN CONTENT WINDOW --- */}
       <main id="main-content" className="flex-1 flex flex-col min-h-0 overflow-y-auto px-6 py-6 sm:px-10 md:px-16 lg:px-24 max-w-[1440px] mx-auto w-full transition-all">
-        
+
         {/* --- HEADER BAR --- */}
         <header className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -94,7 +94,7 @@ export default function CreateUser() {
               Provision a new user configuration with real-time preview.
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3 shrink-0">
             <button
               id="header-btn-back"
@@ -109,7 +109,7 @@ export default function CreateUser() {
 
         {/* Form Section */}
         <div id="create-user-view" className="flex-1 min-h-0 overflow-y-auto py-4 sm:py-8 animate-fade-in">
-          
+
           <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-150 shadow-md w-full max-w-lg mx-auto">
             <div className="mb-6 text-center">
               <h3 className="text-xl font-bold text-slate-900">Configure New Account</h3>
@@ -119,7 +119,7 @@ export default function CreateUser() {
             </div>
 
             <form id="create-user-form" onSubmit={handleCreateUser} className="space-y-6">
-              
+
               {/* Form Field: Name */}
               <div>
                 <label htmlFor="new-name" className="block text-sm font-semibold text-slate-700 mb-1.5">
@@ -135,9 +135,8 @@ export default function CreateUser() {
                     if (formErrors.name) setFormErrors(prev => ({ ...prev, name: undefined }));
                   }}
                   placeholder="e.g. John Doe"
-                  className={`w-full px-4 py-3 border rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-800 ${
-                    formErrors.name ? 'border-rose-300 focus:ring-rose-500 focus:border-rose-500' : 'border-slate-200'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-800 ${formErrors.name ? 'border-rose-300 focus:ring-rose-500 focus:border-rose-500' : 'border-slate-200'
+                    }`}
                 />
                 {formErrors.name && (
                   <p className="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1">
@@ -162,9 +161,8 @@ export default function CreateUser() {
                     if (formErrors.email) setFormErrors(prev => ({ ...prev, email: undefined }));
                   }}
                   placeholder="e.g. john@example.com"
-                  className={`w-full px-4 py-3 border rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-800 ${
-                    formErrors.email ? 'border-rose-300 focus:ring-rose-500 focus:border-rose-500' : 'border-slate-200'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-800 ${formErrors.email ? 'border-rose-300 focus:ring-rose-500 focus:border-rose-500' : 'border-slate-200'
+                    }`}
                 />
                 {formErrors.email && (
                   <p className="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1">
@@ -172,6 +170,22 @@ export default function CreateUser() {
                     {formErrors.email}
                   </p>
                 )}
+              </div>
+
+              {/* Form Field: Role */}
+              <div>
+                <label htmlFor="new-role" className="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Account Role <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  id="new-role"
+                  value={newUserRole}
+                  onChange={(e) => setNewUserRole(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-800 bg-white"
+                >
+                  <option value="user">User (Client)</option>
+                  <option value="manager">Manager</option>
+                </select>
               </div>
 
 
@@ -196,9 +210,9 @@ export default function CreateUser() {
 
                 {isNewAccessOpen && (
                   <>
-                    <div 
-                      className="fixed inset-0 z-10" 
-                      onClick={() => setIsNewAccessOpen(false)} 
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsNewAccessOpen(false)}
                     />
                     <div className="absolute left-0 right-0 mt-2 p-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-20 space-y-1 animate-fade-in">
                       <label className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors text-slate-700 text-sm">

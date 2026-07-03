@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   Sparkles, Image, FileUp, Upload, Key, Settings, 
-  ChevronRight, ChevronLeft, Bot, CheckCircle 
+  ChevronRight, ChevronLeft, Bot, CheckCircle, Shield, Trash2 
 } from 'lucide-react';
 
 export default function CreateChatbotWizard({ 
@@ -15,9 +15,11 @@ export default function CreateChatbotWizard({
   const [botName, setBotName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80');
   const [isDragOver, setIsDragOver] = useState(false);
-  const [kbPdfName, setKbPdfName] = useState('');
+  const [uploadedPdfs, setUploadedPdfs] = useState([]); // Array of { name, size }
+  const [isPdfDragOver, setIsPdfDragOver] = useState(false);
   const [activationKeyword, setActivationKeyword] = useState('');
   const [botInstructions, setBotInstructions] = useState('');
+  const [scanCardRequired, setScanCardRequired] = useState(false);
 
   // Physical movement configuration states
   const [headMovementMode, setHeadMovementMode] = useState('both'); // 'detecting' | 'talking' | 'both'
@@ -79,7 +81,7 @@ export default function CreateChatbotWizard({
       setWizardStep(1);
       return;
     }
-    if (!kbPdfName.trim()) {
+    if (uploadedPdfs.length === 0) {
       showToast('Knowledge Base PDF is required!');
       setWizardStep(2);
       return;
@@ -96,7 +98,7 @@ export default function CreateChatbotWizard({
     }
 
     const finalAvatar = selectedAvatar;
-    const finalPdf = kbPdfName.trim() || 'default_knowledge.pdf';
+    const finalPdf = uploadedPdfs.map(p => p.name).join(', ') || 'default_knowledge.pdf';
     const finalKey = activationKeyword.trim().toLowerCase() || 'hello';
 
     const newBot = {
@@ -104,10 +106,12 @@ export default function CreateChatbotWizard({
       name: botName.trim(),
       onboardingImage: finalAvatar,
       knowledgeBasePdf: finalPdf,
+      knowledgeBasePdfs: uploadedPdfs,
       activationKey: finalKey,
       specificInstructions: botInstructions.trim(),
       createdBy: currentUser.email,
       createdAt: new Date().toISOString().split('T')[0],
+      scanCardRequired: scanCardRequired,
       headMovementMode: hasHeadMovement ? headMovementMode : null,
       handMovements: hasHandMovement ? {
         hi: {
@@ -129,7 +133,7 @@ export default function CreateChatbotWizard({
     // Reset forms
     setBotName('');
     setSelectedAvatar('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80');
-    setKbPdfName('');
+    setUploadedPdfs([]);
     setActivationKeyword('');
     setBotInstructions('');
     setHeadMovementMode('both');
@@ -138,6 +142,7 @@ export default function CreateChatbotWizard({
     setHandMovementByeChatEnds(true);
     setHandMovementThumbsDetect(true);
     setHandMovementThumbsCorrect(true);
+    setScanCardRequired(false);
     setWizardStep(1);
   };
 
@@ -184,7 +189,7 @@ export default function CreateChatbotWizard({
           </button>
           <button 
             type="button"
-            onClick={() => (botName.trim() && kbPdfName.trim()) ? setWizardStep(3) : showToast('Please fill out preceding steps!')}
+            onClick={() => (botName.trim() && uploadedPdfs.length > 0) ? setWizardStep(3) : showToast('Please fill out preceding steps!')}
             className={`py-2 rounded-xl border transition-all cursor-pointer ${
               wizardStep === 3 
                 ? 'bg-indigo-600/10 border-indigo-500 text-indigo-300 font-extrabold' 
@@ -299,39 +304,152 @@ export default function CreateChatbotWizard({
           {wizardStep === 2 && (
             <div className="space-y-5 animate-fade-in text-left">
               
-              {/* Simulated PDF Upload input */}
+              {/* PC PDF Upload and Drag-and-Drop Area */}
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
                   <FileUp className="w-3.5 h-3.5 text-indigo-400" />
-                  Knowledge Base PDF
+                  Knowledge Base PDFs <span className="text-rose-500">*</span>
                 </label>
                 <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
-                  Enter the filename of the PDF containing your chatbot's knowledge base.
+                  Upload one or multiple PDF documents from your PC to train your chatbot.
                 </p>
 
-                <div className="flex gap-2">
+                {/* Dropzone area */}
+                <div 
+                  onDragOver={(e) => { e.preventDefault(); setIsPdfDragOver(true); }}
+                  onDragLeave={() => setIsPdfDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsPdfDragOver(false);
+                    const files = e.dataTransfer?.files;
+                    if (files && files.length > 0) {
+                      const newPdfs = [];
+                      for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        if (!file.name.toLowerCase().endsWith('.pdf')) {
+                          showToast(`File "${file.name}" is not a PDF!`);
+                          continue;
+                        }
+                        const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+                        newPdfs.push({
+                          name: file.name,
+                          size: `${sizeMb} MB`
+                        });
+                      }
+                      if (newPdfs.length > 0) {
+                        setUploadedPdfs(prev => [...prev, ...newPdfs]);
+                        showToast(`Successfully uploaded ${newPdfs.length} PDF(s) from PC!`);
+                      }
+                    }
+                  }}
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center relative group transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
+                    isPdfDragOver 
+                      ? 'border-indigo-500 bg-indigo-500/5' 
+                      : 'border-slate-800 hover:border-indigo-500/30 bg-slate-950/40 hover:bg-slate-950/80'
+                  }`}
+                >
                   <input
-                    type="text"
-                    required
-                    placeholder="e.g. FAQ.pdf"
-                    value={kbPdfName}
-                    onChange={(e) => setKbPdfName(e.target.value)}
-                    className="flex-1 px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs text-white placeholder-slate-600 font-mono"
+                    type="file"
+                    id="pdf-multiple-upload"
+                    multiple
+                    accept=".pdf"
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (files && files.length > 0) {
+                        const newPdfs = [];
+                        for (let i = 0; i < files.length; i++) {
+                          const file = files[i];
+                          if (!file.name.toLowerCase().endsWith('.pdf')) {
+                            showToast(`File "${file.name}" is not a PDF!`);
+                            continue;
+                          }
+                          const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+                          newPdfs.push({
+                            name: file.name,
+                            size: `${sizeMb} MB`
+                          });
+                        }
+                        if (newPdfs.length > 0) {
+                          setUploadedPdfs(prev => [...prev, ...newPdfs]);
+                          showToast(`Successfully uploaded ${newPdfs.length} PDF(s) from PC!`);
+                        }
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
                   />
+                  <div className="p-3 bg-indigo-600/10 text-indigo-400 rounded-2xl group-hover:scale-110 transition-transform">
+                    <FileUp className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-300">Drag & drop multiple PDFs here, or click to upload</p>
+                    <p className="text-[10px] text-slate-500 mt-1">Supports standard PDF manuals and guidelines</p>
+                  </div>
+                  <label 
+                    htmlFor="pdf-multiple-upload"
+                    className="mt-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold rounded-lg transition-all cursor-pointer z-20 relative"
+                  >
+                    Select PDFs from PC
+                  </label>
+                </div>
+
+                {/* Predefined samples helper button */}
+                <div className="mt-3 flex justify-end">
                   <button
                     type="button"
                     onClick={() => {
-                      const samplePDFs = ['nexus_instructions.pdf', 'system_calibration.pdf', 'product_guide_v2.pdf', 'company_faq_v5.pdf'];
-                      const selectedSample = samplePDFs[Math.floor(Math.random() * samplePDFs.length)];
-                      setKbPdfName(selectedSample);
-                      showToast(`Sample file uploaded!`);
+                      const samplePDFs = [
+                        { name: 'nexus_user_instructions.pdf', size: '1.4 MB' },
+                        { name: 'calibration_specs_v2.pdf', size: '2.1 MB' },
+                        { name: 'company_faq_guide.pdf', size: '0.9 MB' }
+                      ];
+                      setUploadedPdfs(prev => [...prev, ...samplePDFs]);
+                      showToast('Pre-made sample PDFs loaded!');
                     }}
-                    className="px-4 bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white rounded-2xl text-[10px] font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 font-bold transition-all flex items-center gap-1 cursor-pointer"
                   >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Attach PDF</span>
+                    <span>+ Load Sample PDFs</span>
                   </button>
                 </div>
+
+                {/* List of uploaded files */}
+                {uploadedPdfs.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Uploaded Documents ({uploadedPdfs.length})
+                    </span>
+                    <div className="max-h-40 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                      {uploadedPdfs.map((pdf, idx) => (
+                        <div 
+                          key={idx}
+                          className="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl animate-fade-in"
+                        >
+                          <div className="flex items-center gap-2.5 overflow-hidden">
+                            <FileUp className="w-4 h-4 text-indigo-400 shrink-0" />
+                            <div className="overflow-hidden">
+                              <p className="text-xs text-slate-200 font-mono truncate" title={pdf.name}>
+                                {pdf.name}
+                              </p>
+                              <span className="text-[9px] text-slate-500 font-mono">
+                                {pdf.size}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUploadedPdfs(prev => prev.filter((_, i) => i !== idx));
+                              showToast('Removed document.');
+                            }}
+                            className="p-1.5 bg-slate-900 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/20 rounded-lg transition-all cursor-pointer shrink-0"
+                            title="Remove Document"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Activation Key keyword input */}
@@ -366,7 +484,7 @@ export default function CreateChatbotWizard({
 
                 <button
                   type="button"
-                  onClick={() => (botName.trim() && kbPdfName.trim() && activationKeyword.trim()) ? setWizardStep(3) : showToast('Please complete all fields first!')}
+                  onClick={() => (botName.trim() && uploadedPdfs.length > 0 && activationKeyword.trim()) ? setWizardStep(3) : showToast('Please complete all fields first!')}
                   className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>Continue</span>
@@ -542,12 +660,54 @@ export default function CreateChatbotWizard({
                 </div>
               )}
 
+               {/* Card Scanning Authentication Check */}
+              <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3 text-left">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-indigo-400" />
+                    <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                      Card Scanning Protocol
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-md text-[9px] font-mono font-bold uppercase">
+                    Security Option
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Require users to scan an authentication card before they can access and chat with this robot.
+                </p>
+                <label className="flex items-center gap-3 py-1 text-xs text-slate-300 hover:text-white transition-colors cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scanCardRequired}
+                    onChange={(e) => setScanCardRequired(e.target.checked)}
+                    className="rounded border-slate-800 text-indigo-600 bg-slate-950 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                  />
+                  <span className="font-bold">Scan Card</span>
+                </label>
+                {scanCardRequired && (
+                  <div className="mt-2.5 pt-2.5 border-t border-slate-900 space-y-1 animate-fade-in">
+                    <h5 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                      End Chat Scan Requirement
+                    </h5>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      Require user to scan the card before they end the chat.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Summary confirmation */}
               <div className="p-4 bg-slate-950/70 border border-slate-800/80 rounded-2xl space-y-1.5 font-mono text-[11px]">
                 <h4 className="font-bold text-slate-300">Ready:</h4>
                 <p className="text-slate-500">Name: <span className="text-slate-300 font-bold">{botName}</span></p>
                 <p className="text-slate-500">Trigger keyword: <span className="text-indigo-300 font-bold">"{activationKeyword}"</span></p>
-                <p className="text-slate-500">Knowledge base: <span className="text-slate-300">{kbPdfName || 'default_knowledge.pdf'}</span></p>
+                <p className="text-slate-500">Knowledge base: <span className="text-slate-300">
+                  {uploadedPdfs.length > 0 ? uploadedPdfs.map(p => p.name).join(', ') : 'default_knowledge.pdf'}
+                </span></p>
+                <p className="text-slate-500">Card Authentication: <span className={scanCardRequired ? "text-emerald-400 font-bold" : "text-slate-400"}>
+                  {scanCardRequired ? 'Required (Scan Card)' : 'Disabled'}
+                </span></p>
               </div>
 
               {/* Navigation Buttons */}

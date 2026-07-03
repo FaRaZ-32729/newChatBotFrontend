@@ -69,7 +69,14 @@ export function AdminProvider({ children }) {
         return { success: false };
       }
       
-      if (password === 'password123') {
+      const correctPassword = userProfile.password || 'password123';
+      if (password === correctPassword) {
+        // Prevent login if no password is set for newly created users who must set password
+        if (userProfile.password === '' && userProfile.otp && !userProfile.otpVerified) {
+          setLoginError('Account not fully activated. Please verify OTP and set your password.');
+          return { success: false };
+        }
+
         const userRole = userProfile.role || 'user';
         setIsLoggedIn(userRole === 'admin');
         if (userRole === 'admin') {
@@ -95,7 +102,7 @@ export function AdminProvider({ children }) {
           return { success: true, role: userRole, redirect: '/' };
         }
       } else {
-        setLoginError('Invalid password. For sandbox testing, use "password123".');
+        setLoginError('Invalid password. Try again or reset password.');
         return { success: false };
       }
     }
@@ -252,8 +259,24 @@ export function AdminProvider({ children }) {
 
   // Create User
   const createUser = (newUser) => {
-    setUsers(prev => [newUser, ...prev]);
-    showToast(`Successfully created user: ${newUser.name}`);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const userWithOtp = {
+      ...newUser,
+      otp: otp,
+      otpVerified: false,
+      password: ''
+    };
+    
+    // Save last simulated email with OTP in localStorage for easy sandbox retrieval/simulation
+    localStorage.setItem('sandbox_last_email_otp', JSON.stringify({
+      email: newUser.email,
+      otp: otp,
+      name: newUser.name,
+      type: 'creation'
+    }));
+
+    setUsers(prev => [userWithOtp, ...prev]);
+    showToast(`Registered ${newUser.name}! Sandbox OTP: ${otp} (Simulated email sent)`);
   };
 
   // Update User

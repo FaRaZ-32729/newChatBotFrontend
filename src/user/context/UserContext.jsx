@@ -215,6 +215,8 @@ export function UserProvider({ children }) {
       console.error(e);
     }
 
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
     const newUser = {
       id: `usr_${Date.now()}`,
       name: name.trim(),
@@ -229,8 +231,19 @@ export function UserProvider({ children }) {
       activationKeys: ['salam', 'hello', 'hay'],
       knowledgeBase: [],
       specificInstructions: 'Greet the user warmly. Assist them with navigation.',
-      createdBy: creatorEmail
+      createdBy: creatorEmail,
+      otp: otp,
+      otpVerified: false,
+      password: ''
     };
+
+    // Save last simulated email with OTP in localStorage for easy sandbox retrieval/simulation
+    localStorage.setItem('sandbox_last_email_otp', JSON.stringify({
+      email: newUser.email,
+      otp: otp,
+      name: newUser.name,
+      type: 'creation'
+    }));
 
     setUsers(prev => [newUser, ...prev]);
     return newUser;

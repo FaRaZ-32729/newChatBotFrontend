@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Settings, Upload, FileUp } from 'lucide-react';
+import { X, Settings, Upload, FileUp, Shield, Trash2 } from 'lucide-react';
 
 export default function EditChatbotModal({
   chatbot,
@@ -14,7 +14,20 @@ export default function EditChatbotModal({
     chatbot?.onboardingImage || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80'
   );
   const [editIsDragOver, setEditIsDragOver] = useState(false);
-  const [editKbPdfName, setEditKbPdfName] = useState(chatbot?.knowledgeBasePdf || '');
+  const [editUploadedPdfs, setEditUploadedPdfs] = useState(() => {
+    if (chatbot?.knowledgeBasePdfs && Array.isArray(chatbot.knowledgeBasePdfs)) {
+      return chatbot.knowledgeBasePdfs;
+    }
+    if (chatbot?.knowledgeBasePdf) {
+      return chatbot.knowledgeBasePdf.split(',').map(name => ({
+        name: name.trim(),
+        size: '1.2 MB'
+      }));
+    }
+    return [];
+  });
+  const [editIsPdfDragOver, setEditIsPdfDragOver] = useState(false);
+  const [editScanCardRequired, setEditScanCardRequired] = useState(chatbot?.scanCardRequired ?? false);
   const [editActivationKeyword, setEditActivationKeyword] = useState(chatbot?.activationKey || '');
   const [editBotInstructions, setEditBotInstructions] = useState(chatbot?.specificInstructions || '');
   const [editHeadMovementMode, setEditHeadMovementMode] = useState(chatbot?.headMovementMode || 'both');
@@ -75,7 +88,7 @@ export default function EditChatbotModal({
       showToast('Chatbot Name is required!');
       return;
     }
-    if (!editKbPdfName.trim()) {
+    if (editUploadedPdfs.length === 0) {
       showToast('Knowledge Base PDF is required!');
       return;
     }
@@ -91,9 +104,11 @@ export default function EditChatbotModal({
     const updatedBot = {
       name: editBotName.trim(),
       onboardingImage: editSelectedAvatar,
-      knowledgeBasePdf: editKbPdfName.trim(),
+      knowledgeBasePdf: editUploadedPdfs.map(p => p.name).join(', '),
+      knowledgeBasePdfs: editUploadedPdfs,
       activationKey: editActivationKeyword.trim().toLowerCase(),
       specificInstructions: editBotInstructions.trim(),
+      scanCardRequired: editScanCardRequired,
       headMovementMode: hasHeadMovement ? editHeadMovementMode : null,
       handMovements: hasHandMovement ? {
         hi: {
@@ -198,31 +213,137 @@ export default function EditChatbotModal({
 
           {/* Knowledge Base PDF Name */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
-              Knowledge Base PDF
+            <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+              <FileUp className="w-3.5 h-3.5 text-indigo-400" />
+              Knowledge Base PDFs <span className="text-rose-500">*</span>
             </label>
-            <div className="flex gap-2">
+            <p className="text-[11px] text-slate-500 mb-2 leading-relaxed">
+              Upload multiple PDF documents from your computer.
+            </p>
+
+            {/* Dropzone for Edit */}
+            <div 
+              onDragOver={(e) => { e.preventDefault(); setEditIsPdfDragOver(true); }}
+              onDragLeave={() => setEditIsPdfDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setEditIsPdfDragOver(false);
+                const files = e.dataTransfer?.files;
+                if (files && files.length > 0) {
+                  const newPdfs = [];
+                  for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (!file.name.toLowerCase().endsWith('.pdf')) {
+                      showToast(`File "${file.name}" is not a PDF!`);
+                      continue;
+                    }
+                    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+                    newPdfs.push({
+                      name: file.name,
+                      size: `${sizeMb} MB`
+                    });
+                  }
+                  if (newPdfs.length > 0) {
+                    setEditUploadedPdfs(prev => [...prev, ...newPdfs]);
+                    showToast(`Added ${newPdfs.length} PDF(s) from PC!`);
+                  }
+                }
+              }}
+              className={`border-2 border-dashed rounded-2xl p-4 text-center relative group transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
+                editIsPdfDragOver 
+                  ? 'border-indigo-500 bg-indigo-500/5' 
+                  : 'border-slate-800 hover:border-indigo-500/30 bg-slate-950/40 hover:bg-slate-950/80'
+              }`}
+            >
               <input
-                type="text"
-                required
-                value={editKbPdfName}
-                onChange={(e) => setEditKbPdfName(e.target.value)}
-                className="flex-1 px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs text-white font-mono"
+                type="file"
+                id="edit-pdf-multiple"
+                multiple
+                accept=".pdf"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files && files.length > 0) {
+                    const newPdfs = [];
+                    for (let i = 0; i < files.length; i++) {
+                      const file = files[i];
+                      if (!file.name.toLowerCase().endsWith('.pdf')) {
+                        showToast(`File "${file.name}" is not a PDF!`);
+                        continue;
+                      }
+                      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+                      newPdfs.push({
+                        name: file.name,
+                        size: `${sizeMb} MB`
+                      });
+                    }
+                    if (newPdfs.length > 0) {
+                      setEditUploadedPdfs(prev => [...prev, ...newPdfs]);
+                      showToast(`Added ${newPdfs.length} PDF(s) from PC!`);
+                    }
+                  }
+                }}
+                className="absolute inset-0 opacity-0 cursor-pointer z-10"
               />
+              <FileUp className="w-5 h-5 text-indigo-400" />
+              <p className="text-[11px] font-bold text-slate-300">Drag & drop PDFs here, or click to upload</p>
+            </div>
+
+            {/* Load Sample helper */}
+            <div className="mt-1.5 flex justify-end">
               <button
                 type="button"
                 onClick={() => {
-                  const samplePDFs = ['nexus_instructions.pdf', 'system_calibration.pdf', 'product_guide_v2.pdf', 'company_faq_v5.pdf'];
-                  const selectedSample = samplePDFs[Math.floor(Math.random() * samplePDFs.length)];
-                  setEditKbPdfName(selectedSample);
-                  showToast(`Sample file uploaded!`);
+                  const samplePDFs = [
+                    { name: 'nexus_user_instructions.pdf', size: '1.4 MB' },
+                    { name: 'calibration_specs_v2.pdf', size: '2.1 MB' }
+                  ];
+                  setEditUploadedPdfs(prev => [...prev, ...samplePDFs]);
+                  showToast('Sample PDFs added!');
                 }}
-                className="px-4 bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white rounded-2xl text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold cursor-pointer"
               >
-                <Upload className="w-3.5 h-3.5" />
-                <span>Attach PDF</span>
+                + Add Sample PDFs
               </button>
             </div>
+
+            {/* List of files */}
+            {editUploadedPdfs.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Documents ({editUploadedPdfs.length})
+                </span>
+                <div className="max-h-32 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                  {editUploadedPdfs.map((pdf, idx) => (
+                    <div 
+                      key={idx}
+                      className="flex items-center justify-between p-2.5 bg-slate-950 border border-slate-800 rounded-xl"
+                    >
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <FileUp className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <div className="overflow-hidden">
+                          <p className="text-[11px] text-slate-200 font-mono truncate" title={pdf.name}>
+                            {pdf.name}
+                          </p>
+                          <span className="text-[8px] text-slate-500 font-mono">
+                            {pdf.size}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditUploadedPdfs(prev => prev.filter((_, i) => i !== idx));
+                          showToast('Document removed.');
+                        }}
+                        className="p-1 bg-slate-900 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/20 rounded-md transition-all cursor-pointer shrink-0"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Activation Gesture Keyword */}
@@ -342,6 +463,35 @@ export default function EditChatbotModal({
               )}
             </div>
           )}
+
+          {/* Security & Card Scanning Protocol */}
+          <div className="bg-slate-950/40 p-4 rounded-2xl border border-slate-800 space-y-2 text-left">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-850 pb-1.5">
+              Security Protocol
+            </span>
+            <p className="text-[10px] text-slate-500 leading-relaxed">
+              When active, users are required to complete card scanning authentication prior to starting their chat session.
+            </p>
+            <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer hover:text-white py-1">
+              <input
+                type="checkbox"
+                checked={editScanCardRequired}
+                onChange={(e) => setEditScanCardRequired(e.target.checked)}
+                className="rounded border-slate-800 text-indigo-600 bg-slate-950 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className="font-bold">Scan Card</span>
+            </label>
+            {editScanCardRequired && (
+              <div className="mt-2.5 pt-2.5 border-t border-slate-900 space-y-1 animate-fade-in">
+                <h5 className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">
+                  End Chat Scan Requirement
+                </h5>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Require user to scan the card before they end the chat.
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">

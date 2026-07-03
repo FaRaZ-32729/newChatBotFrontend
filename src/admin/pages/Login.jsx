@@ -37,9 +37,9 @@ export default function Login() {
       setLoginError('Please enter both email and password.');
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     // Simulate a brief premium transition delay (e.g. 350ms) to make the loader visible & smooth
     setTimeout(() => {
       const result = login(email, password);
@@ -86,7 +86,7 @@ export default function Login() {
             return;
           }
         }
-      } catch (err) {}
+      } catch (err) { }
       setEmail('faraz@backend.dev');
       setPassword('password123');
     }
@@ -95,7 +95,7 @@ export default function Login() {
   return (
     <div id="login-container" className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative select-none">
       <ToastNotification />
-      
+
       {/* Glow Effects */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
 
@@ -113,7 +113,7 @@ export default function Login() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10">
         <div className="bg-slate-900/80 backdrop-blur-md py-8 px-5 shadow-2xl rounded-3xl border border-slate-800 sm:px-10">
-          
+
           <form id="login-form" onSubmit={handleSubmit} className="space-y-5">
             {loginError && (
               <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-4 rounded-2xl flex items-start gap-3 text-xs animate-fade-in">
@@ -144,9 +144,18 @@ export default function Login() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Password
-              </label>
+              <div className="flex justify-between items-center mb-1.5">
+                <label htmlFor="password" className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold hover:underline cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <input
                 id="password"
                 name="password"
@@ -181,6 +190,16 @@ export default function Login() {
                 )}
               </button>
             </div>
+
+            <div className="text-center mt-1">
+              <button
+                type="button"
+                onClick={() => navigate('/verify-otp')}
+                className="text-[11px] text-slate-400 hover:text-white font-semibold transition-all cursor-pointer hover:underline"
+              >
+                Received an OTP or invite? Verify Code & Set Password
+              </button>
+            </div>
           </form>
 
           {/* Quick-fill helpers */}
@@ -189,7 +208,7 @@ export default function Login() {
               <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
               Quick-Fill Sandbox Access
             </p>
-            
+
             <div className="space-y-3">
               {/* Main Roles */}
               <div className="grid grid-cols-3 gap-2">

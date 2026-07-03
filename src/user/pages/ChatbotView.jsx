@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Bot, ArrowLeft, Send, Sparkles, FileText, Key, Shield, 
-  Settings, Zap, AlertCircle, RefreshCw, X, MessageSquare 
+import {
+  Bot, ArrowLeft, Send, Sparkles, FileText, Key, Shield,
+  Settings, Zap, AlertCircle, RefreshCw, X, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useUser } from '../context/UserContext';
@@ -19,9 +19,15 @@ export default function ChatbotView() {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  
+
   // Gesture animation overlay state
   const [activeGesture, setActiveGesture] = useState(null); // null | { type: string, reason: string }
+
+  // Card scan states
+  const [showCardScanner, setShowCardScanner] = useState(false);
+  const [isCardScanned, setIsCardScanned] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanStatus, setScanStatus] = useState('idle'); // 'idle' | 'scanning' | 'success' | 'error'
 
   const messagesEndRef = useRef(null);
 
@@ -53,6 +59,11 @@ export default function ChatbotView() {
 
   // Prepopulate welcome message
   const startChat = () => {
+    if (chatbot.scanCardRequired && !isCardScanned) {
+      setShowCardScanner(true);
+      setScanStatus('idle');
+      return;
+    }
     setActiveScreen('chat');
     if (messages.length === 0) {
       setIsTyping(true);
@@ -166,7 +177,7 @@ export default function ChatbotView() {
 
   return (
     <div id="immersive-chatbot-shell" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative overflow-hidden">
-      
+
       {/* Visual background decorations */}
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-600/5 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-violet-600/5 rounded-full blur-[120px] pointer-events-none" />
@@ -254,6 +265,18 @@ export default function ChatbotView() {
                     {chatbot.headMovementMode && chatbot.handMovements ? 'Both Movements Active' : chatbot.handMovements ? 'Hand Movement Active' : chatbot.headMovementMode ? 'Head Movement Active' : 'No Movement Active'}
                   </span>
                 </div>
+                {chatbot.scanCardRequired && (
+                  <div className="flex justify-between items-center border-b border-slate-900 pb-2.5">
+                    <span className="text-slate-500 flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-rose-400" />
+                      Card Lock Status
+                    </span>
+                    <span className={isCardScanned ? "text-emerald-400 font-bold flex items-center gap-1.5" : "text-amber-400 font-bold flex items-center gap-1.5"}>
+                      <span className={`w-2 h-2 rounded-full ${isCardScanned ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+                      {isCardScanned ? 'Access Granted' : 'Scan Card Required'}
+                    </span>
+                  </div>
+                )}
                 {chatbot.specificInstructions && (
                   <div className="pt-1.5">
                     <span className="text-slate-500 flex items-center gap-1.5 mb-1">
@@ -309,7 +332,7 @@ export default function ChatbotView() {
                       <div className="absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl animate-pulse" />
                       <div className="w-24 h-24 rounded-full bg-indigo-950/60 border-2 border-indigo-500 flex items-center justify-center text-indigo-400 relative">
                         <Bot className="w-12 h-12" />
-                        
+
                         {/* CSS animated circles */}
                         <div className="absolute inset-0 border-2 border-indigo-400 rounded-full animate-ping opacity-30" />
                       </div>
@@ -343,11 +366,11 @@ export default function ChatbotView() {
                     {/* Animated Joint Indicator (Wireframe Mockup) */}
                     <div className="w-full h-28 mt-6 bg-slate-950 border border-slate-800 rounded-2xl relative overflow-hidden flex items-center justify-center">
                       <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:14px_24px]" />
-                      
+
                       {activeGesture.type === 'head' ? (
                         /* Nodding Head Graphic Animation */
                         <div className="flex flex-col items-center">
-                          <motion.div 
+                          <motion.div
                             animate={{ y: [0, -8, 4, -4, 0] }}
                             transition={{ repeat: Infinity, duration: 1.2 }}
                             className="w-10 h-10 bg-indigo-500/10 border-2 border-indigo-400 rounded-2xl flex items-center justify-center text-indigo-400 shadow-md"
@@ -359,7 +382,7 @@ export default function ChatbotView() {
                       ) : activeGesture.type === 'hand_thumbsUp' ? (
                         /* Thumbs Up Graphic Animation */
                         <div className="flex gap-1 items-end h-12">
-                          <motion.div 
+                          <motion.div
                             animate={{ scale: [1, 1.15, 0.95, 1.05, 1] }}
                             transition={{ repeat: Infinity, duration: 1.5 }}
                             className="origin-bottom"
@@ -372,7 +395,7 @@ export default function ChatbotView() {
                       ) : (
                         /* Waving Hand Graphic Animation (both hi and bye) */
                         <div className="flex gap-1 items-end h-12">
-                          <motion.div 
+                          <motion.div
                             animate={{ rotate: [0, 20, -20, 20, 0] }}
                             transition={{ repeat: Infinity, duration: activeGesture.type === 'hand_bye' ? 2.0 : 1.2 }}
                             className="origin-bottom"
@@ -426,7 +449,7 @@ export default function ChatbotView() {
               <div className="p-6 flex-1 space-y-6 overflow-y-auto">
                 <div className="space-y-2">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Configuration</span>
-                  
+
                   {/* Knowledge base doc */}
                   <div className="p-3 bg-slate-950/80 border border-slate-800/80 rounded-xl flex items-start gap-2.5">
                     <FileText className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
@@ -484,7 +507,7 @@ export default function ChatbotView() {
 
             {/* B. Main Chat Pane */}
             <section className="flex-1 flex flex-col bg-slate-950 overflow-hidden relative">
-              
+
               {/* Top Header */}
               <header className="h-16 border-b border-slate-800 px-6 bg-slate-900/60 backdrop-blur-md flex items-center justify-between shrink-0 z-20">
                 <div className="flex items-center gap-3">
@@ -593,7 +616,7 @@ export default function ChatbotView() {
 
               {/* Chat Messages Log */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-                
+
                 {/* Embedded system header */}
                 <div className="mx-auto max-w-md text-center py-4 px-3 bg-slate-900/40 border border-slate-800 rounded-2xl space-y-1.5">
                   <div className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mx-auto">
@@ -608,9 +631,8 @@ export default function ChatbotView() {
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex items-start gap-3.5 ${
-                      msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
+                    className={`flex items-start gap-3.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
                   >
                     {/* Bot Avatar */}
                     {msg.sender === 'bot' && (
@@ -625,11 +647,10 @@ export default function ChatbotView() {
                     )}
 
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-3.5 text-xs leading-relaxed ${
-                        msg.sender === 'user'
+                      className={`max-w-[80%] rounded-2xl px-4 py-3.5 text-xs leading-relaxed ${msg.sender === 'user'
                           ? 'bg-gradient-to-tr from-indigo-600/90 to-indigo-700/90 text-white rounded-tr-none border border-indigo-500/20'
                           : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none whitespace-pre-wrap'
-                      }`}
+                        }`}
                     >
                       <p>{msg.text}</p>
                       {msg.sender === 'bot' && !msg.id.startsWith('system_') && msg.id !== 'welcome' && (
@@ -733,6 +754,191 @@ export default function ChatbotView() {
 
             </section>
 
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* NFC/RFID Card Scanning Simulator Overlay Modal */}
+      <AnimatePresence>
+        {showCardScanner && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[100] flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.93, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.93, y: 15 }}
+              className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden text-center space-y-6"
+            >
+              {/* Sci-Fi scanner grids */}
+              <div className="absolute top-0 left-0 w-6 h-6 border-t border-l border-indigo-500 rounded-tl-2xl" />
+              <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-indigo-500 rounded-tr-2xl" />
+              <div className="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-indigo-500 rounded-bl-2xl" />
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b border-r border-indigo-500 rounded-br-2xl" />
+
+              <div className="space-y-1.5">
+                <span className="px-2.5 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-mono font-bold tracking-wider uppercase rounded">
+                  Security Protocol Active
+                </span>
+                <h3 className="text-lg font-black text-white">NFC/RFID Card Access Required</h3>
+                <p className="text-[11px] text-slate-400 leading-relaxed max-w-sm mx-auto">
+                  To open a secure channel with **{chatbot.name}**, please scan your authentication card.
+                </p>
+              </div>
+
+              {/* Holographic Interactive Card Reader Area */}
+              <div className="relative py-8 flex flex-col items-center justify-center bg-slate-950/60 border border-slate-850 rounded-2xl overflow-hidden">
+                {/* Background scanning lasers */}
+                {scanStatus === 'scanning' && (
+                  <div className="absolute inset-x-0 h-0.5 bg-indigo-500 opacity-80 shadow-md shadow-indigo-500 top-0 animate-pulse" style={{
+                    animation: 'scanLine 1.5s ease-in-out infinite'
+                  }} />
+                )}
+
+                <style>{`
+                  @keyframes scanLine {
+                    0% { top: 0%; opacity: 0.2; }
+                    50% { top: 100%; opacity: 1; }
+                    100% { top: 0%; opacity: 0.2; }
+                  }
+                `}</style>
+
+                {/* Simulated Access Card Badge */}
+                <motion.div
+                  animate={scanStatus === 'scanning' ? {
+                    y: [0, -10, 0],
+                    rotateX: [0, 15, 0],
+                    scale: [1, 1.05, 1]
+                  } : {}}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className={`w-52 h-32 rounded-xl border p-3.5 flex flex-col justify-between text-left shadow-xl transition-all ${scanStatus === 'success'
+                      ? 'bg-emerald-950/20 border-emerald-500/50 shadow-emerald-950/10'
+                      : scanStatus === 'scanning'
+                        ? 'bg-indigo-950/40 border-indigo-500/60 shadow-indigo-500/10'
+                        : 'bg-slate-900 border-slate-700/80 shadow-black/40'
+                    }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-[10px] font-black text-slate-300 font-mono tracking-wider">SECURE ACCESS</h4>
+                      <span className="text-[8px] text-slate-500 font-mono">UID: F7B8-90A1-4CDE</span>
+                    </div>
+                    <div className="w-7 h-7 rounded bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                  </div>
+
+                  {/* Card Smart-Chip */}
+                  <div className="w-7 h-5 bg-amber-500/30 border border-amber-500/40 rounded-sm self-start my-1.5 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-amber-400/10" />
+                    <div className="h-full w-[1px] bg-amber-500/20 mx-auto" />
+                  </div>
+
+                  <div className="flex justify-between items-end font-mono">
+                    <div>
+                      <p className="text-[9px] text-white font-bold">Authorized User</p>
+                      <span className="text-[7px] text-slate-500">LEVEL 4 SECURITY</span>
+                    </div>
+                    <div className="w-6 h-6 rounded-full bg-slate-800/80 flex items-center justify-center text-[10px] text-slate-400">
+                      ⚡
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Radar scanner feedback text */}
+                <div className="mt-5 space-y-1">
+                  {scanStatus === 'idle' && (
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5 justify-center">
+                      <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping" />
+                      Ready to Scan
+                    </p>
+                  )}
+                  {scanStatus === 'scanning' && (
+                    <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest flex items-center gap-1.5 justify-center">
+                      <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" />
+                      Decrypting Transponder RFID...
+                    </p>
+                  )}
+                  {scanStatus === 'success' && (
+                    <p className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5 justify-center">
+                      <span>✓ Authorization Verified</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* User interaction CTA */}
+              <div className="space-y-3">
+                {scanStatus === 'idle' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScanStatus('scanning');
+                      // Wait 2 seconds then succeed
+                      setTimeout(() => {
+                        setScanStatus('success');
+                        setTimeout(() => {
+                          setIsCardScanned(true);
+                          setShowCardScanner(false);
+                          // Proceed directly to chat screen
+                          setActiveScreen('chat');
+                          if (messages.length === 0) {
+                            setIsTyping(true);
+                            setTimeout(() => {
+                              setMessages([
+                                {
+                                  id: 'welcome',
+                                  sender: 'bot',
+                                  text: `System Synced! Hello, I am **${chatbot.name}**. I have been fully initialized with your knowledge base document **"${chatbot.knowledgeBasePdf || 'No PDF'}"**.\n\n${chatbot.specificInstructions ? `My operating instructions: *"${chatbot.specificInstructions}"*\n\n` : ''}You can chat with me freely! My gesture activation key is **"${chatbot.activationKey || 'None'}"** — type it to trigger my mechanical movement protocol!`,
+                                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                }
+                              ]);
+                              setIsTyping(false);
+                            }, 1000);
+                          }
+                        }, 1200);
+                      }, 2000);
+                    }}
+                    className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <Shield className="w-4 h-4 text-indigo-200 animate-pulse" />
+                    <span>TAP CARD TO SCAN (SIMULATOR)</span>
+                  </button>
+                )}
+
+                {scanStatus === 'scanning' && (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full py-3.5 bg-indigo-950/40 border border-indigo-500/30 text-indigo-400 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-not-allowed"
+                  >
+                    <RefreshCw className="w-4 h-4 text-indigo-400 animate-spin" />
+                    <span>READING SECURE ID PROXIMITY...</span>
+                  </button>
+                )}
+
+                {scanStatus === 'success' && (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full py-3.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>ACCESS GRANTED • SYNCHRONIZING</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowCardScanner(false)}
+                  className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 rounded-xl text-xs transition-all cursor-pointer"
+                >
+                  Cancel & Go Back
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
