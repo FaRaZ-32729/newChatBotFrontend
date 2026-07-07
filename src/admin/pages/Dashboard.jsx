@@ -22,7 +22,7 @@ export default function Dashboard() {
   // Authenticated state guard
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/admin/login', { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [isLoggedIn, navigate]);
 

@@ -16,7 +16,7 @@ export default function UserDetails() {
   // Auth guard
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/admin/login', { replace: true });
+      navigate('/login', { replace: true });
     } else if (!user) {
       showToast('User configuration not found.');
       navigate('/admin/dashboard', { replace: true });

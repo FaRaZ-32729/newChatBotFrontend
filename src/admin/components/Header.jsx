@@ -8,7 +8,7 @@ export default function Header() {
 
   const handleSignOut = async () => {
     await logout();
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   return (
