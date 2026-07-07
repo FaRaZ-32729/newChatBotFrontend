@@ -2,7 +2,7 @@ import { Users, UserCheck, UserX } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 
 export default function StatsGrid({ statusFilter, setStatusFilter }) {
-  const { stats } = useAdmin();
+  const { stats, isLoadingManagers } = useAdmin();
 
   return (
     <section id="stats-grid" className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -19,7 +19,9 @@ export default function StatsGrid({ statusFilter, setStatusFilter }) {
       >
         <div>
           <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Total Bot Users</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">{stats.total}</p>
+          <p className="text-3xl font-bold text-slate-900 mt-1">
+            {isLoadingManagers ? '—' : stats.total}
+          </p>
           <div className="mt-1 flex items-center gap-1 text-xs text-indigo-600 font-medium">
             <span>Registered accounts</span>
           </div>
@@ -41,7 +43,9 @@ export default function StatsGrid({ statusFilter, setStatusFilter }) {
       >
         <div>
           <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Active Users</p>
-          <p className="text-3xl font-bold text-emerald-600 mt-1">{stats.active}</p>
+          <p className="text-3xl font-bold text-emerald-600 mt-1">
+            {isLoadingManagers ? '—' : stats.active}
+          </p>
           <div className="mt-1 flex items-center gap-1 text-xs text-emerald-600 font-semibold">
             <span>
               {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% Active Rate
@@ -65,7 +69,9 @@ export default function StatsGrid({ statusFilter, setStatusFilter }) {
       >
         <div>
           <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Inactive Users</p>
-          <p className="text-3xl font-bold text-slate-500 mt-1">{stats.inactive}</p>
+          <p className="text-3xl font-bold text-slate-500 mt-1">
+            {isLoadingManagers ? '—' : stats.inactive}
+          </p>
           <div className="mt-1 flex items-center gap-1 text-xs text-slate-500 font-medium">
             <span>
               {stats.total > 0 ? Math.round((stats.inactive / stats.total) * 100) : 0}% Dormant

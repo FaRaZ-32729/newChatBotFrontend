@@ -63,8 +63,8 @@
       setTimeout(() => setToast(''), 4000);
     };
 
-    const handleSignOut = () => {
-      logoutUser();
+    const handleSignOut = async () => {
+      await logoutUser();
       navigate('/login');
     };
 

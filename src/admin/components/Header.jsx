@@ -6,8 +6,8 @@ export default function Header() {
   const { logout } = useAdmin();
   const navigate = useNavigate();
 
-  const handleSignOut = () => {
-    logout();
+  const handleSignOut = async () => {
+    await logout();
     navigate('/admin/login');
   };
 

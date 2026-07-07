@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
+import { forgotPasswordApi } from '../../api/auth.api';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
-  
+
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -22,54 +23,22 @@ export default function ForgotPassword() {
 
     setIsLoading(true);
 
-    // Simulated network transition
-    setTimeout(() => {
-      try {
-        const savedUsers = localStorage.getItem('chatbot_users');
-        const users = savedUsers ? JSON.parse(savedUsers) : [];
-        const cleanEmail = email.trim().toLowerCase();
-        
-        const userIndex = users.findIndex(u => u.email.trim().toLowerCase() === cleanEmail);
-        
-        if (userIndex === -1) {
-          setError('We could not find an account associated with this email.');
-          setIsLoading(false);
-          return;
-        }
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const response = await forgotPasswordApi(cleanEmail);
+      setSuccess(response.message || `Password reset OTP sent to ${cleanEmail}.`);
 
-        // Generate and assign a new OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        users[userIndex].otp = otp;
-        users[userIndex].otpVerified = false; // Reset verification state
-        
-        // Save users
-        localStorage.setItem('chatbot_users', JSON.stringify(users));
-
-        // Save last simulated OTP to localStorage for easy sandbox retrieval
-        localStorage.setItem('sandbox_last_email_otp', JSON.stringify({
-          email: cleanEmail,
-          otp: otp,
-          name: users[userIndex].name,
-          type: 'forgot_password'
-        }));
-
-        setSuccess(`OTP Code generated successfully! Simulated recovery email sent to ${cleanEmail}.`);
-        
-        // Wait 1.5s then navigate to verify screen
-        setTimeout(() => {
-          navigate(`/verify-otp?email=${encodeURIComponent(cleanEmail)}`);
-        }, 1500);
-
-      } catch (err) {
-        setError('Failed to initiate password reset. Please try again.');
-        setIsLoading(false);
-      }
-    }, 700);
+      setTimeout(() => {
+        navigate(`/verify-otp?email=${encodeURIComponent(cleanEmail)}`);
+      }, 1500);
+    } catch (err) {
+      setError(err.message || 'Failed to initiate password reset. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
     <div id="forgot-password-container" className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative select-none">
-      {/* Glow Effects */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10">
@@ -86,7 +55,6 @@ export default function ForgotPassword() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10">
         <div className="bg-slate-900/80 backdrop-blur-md py-8 px-5 shadow-2xl rounded-3xl border border-slate-800 sm:px-10">
-          
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-4 rounded-2xl flex items-start gap-3 text-xs animate-fade-in">
@@ -145,7 +113,6 @@ export default function ForgotPassword() {
               Back to Login Portal
             </button>
           </div>
-
         </div>
       </div>
     </div>

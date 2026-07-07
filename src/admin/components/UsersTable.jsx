@@ -11,9 +11,10 @@ export default function UsersTable({
   setStatusFilter, 
   onStartEdit 
 }) {
-  const { users, deleteUser } = useAdmin();
+  const { users, deleteUser, isLoadingManagers } = useAdmin();
   const navigate = useNavigate();
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Filtered and searched users
   const filteredUsers = useMemo(() => {
@@ -21,7 +22,7 @@ export default function UsersTable({
       const matchesSearch =
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.platform.toLowerCase().includes(searchQuery.toLowerCase());
+        (user.platform || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesStatus =
         statusFilter === 'all' ||
@@ -104,7 +105,12 @@ export default function UsersTable({
 
       {/* TABLE LIST - Dynamic Responsive Presentation with internal scrollbars */}
       <div id="users-table-container" className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-        {filteredUsers.length === 0 ? (
+        {isLoadingManagers ? (
+          <div className="py-16 px-4 text-center">
+            <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm text-slate-500">Loading managers...</p>
+          </div>
+        ) : filteredUsers.length === 0 ? (
           <div className="py-16 px-4 text-center">
             <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <p className="text-base font-semibold text-slate-800">No users found</p>
@@ -145,7 +151,7 @@ export default function UsersTable({
                       </p>
                       <p className="text-xs text-slate-500 font-mono mt-0.5">{user.email}</p>
                       <div className="mt-1.5 flex flex-wrap gap-1">
-                        {(Array.isArray(user.access) ? user.access : [user.access || 'Head Movement']).map((acc, idx) => (
+                        {(user.access?.length ? user.access : ['No Access']).map((acc, idx) => (
                           <span key={idx} className="inline-flex px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
                             {acc}
                           </span>
@@ -247,7 +253,7 @@ export default function UsersTable({
                       {/* Access Method Info */}
                       <td className="px-5 py-3 whitespace-nowrap">
                         <div className="flex flex-wrap gap-1">
-                          {(Array.isArray(user.access) ? user.access : [user.access || 'Head Movement']).map((acc, idx) => (
+                          {(user.access?.length ? user.access : ['No Access']).map((acc, idx) => (
                             <span key={idx} className="inline-flex px-2 py-0.5 bg-indigo-50/50 text-indigo-700 text-[10px] font-semibold rounded-md uppercase tracking-wider">
                               {acc}
                             </span>
@@ -318,17 +324,22 @@ export default function UsersTable({
       <ConfirmationModal
         isOpen={deleteConfirmTarget !== null}
         title="Delete User Account"
-        message={`Are you sure you want to delete "${deleteConfirmTarget?.name}"? All associated virtual environments, customized parameters, and access permissions will be immediately purged.`}
-        confirmText="Confirm Delete"
+        message={`Are you sure you want to delete "${deleteConfirmTarget?.name}"? This manager and all associated client accounts will be permanently removed.`}
+        confirmText={isDeleting ? 'Deleting...' : 'Confirm Delete'}
         cancelText="Cancel"
         theme="light"
-        onConfirm={() => {
-          if (deleteConfirmTarget) {
-            deleteUser(deleteConfirmTarget.id, deleteConfirmTarget.name);
+        onConfirm={async () => {
+          if (!deleteConfirmTarget || isDeleting) return;
+          setIsDeleting(true);
+          const result = await deleteUser(deleteConfirmTarget.id, deleteConfirmTarget.name);
+          setIsDeleting(false);
+          if (result?.success) {
             setDeleteConfirmTarget(null);
           }
         }}
-        onCancel={() => setDeleteConfirmTarget(null)}
+        onCancel={() => {
+          if (!isDeleting) setDeleteConfirmTarget(null);
+        }}
       />
 
     </section>

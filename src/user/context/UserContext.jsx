@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { logoutApi } from '../../api/auth.api';
+import { clearSession, getStoredSession } from '../../utils/authSession';
 
 const UserContext = createContext(null);
 
@@ -73,48 +75,30 @@ export function UserProvider({ children }) {
     setChatbots(prev => prev.filter(b => b.id !== botId));
   };
 
-  // Handle User Login
-  const loginUser = (email) => {
-    // Re-fetch users from localStorage to make sure we have the latest from admin changes
-    const latestUsersSaved = localStorage.getItem('chatbot_users');
-    const latestUsers = latestUsersSaved ? JSON.parse(latestUsersSaved) : users;
-    setUsers(latestUsers);
-
-    const user = latestUsers.find(u => u.email.trim().toLowerCase() === email.trim().toLowerCase());
-    
-    if (!user) {
-      return { success: false, error: 'User with this email was not found. Contact administrator.' };
-    }
-
-    if (user.status === 'inactive') {
-      return { 
-        success: false, 
-        error: `Your account is deactivated. Reason: ${user.statusReason || 'No specific reason provided.'}` 
-      };
-    }
-
-    setCurrentUser(user);
-    localStorage.setItem('current_user', JSON.stringify(user));
-    return { success: true };
-  };
-
-  // Sync session on-demand
   const syncSession = () => {
-    const saved = localStorage.getItem('current_user');
-    setCurrentUser(saved ? JSON.parse(saved) : null);
-    
+    const session = getStoredSession();
+    if (!session || session.role === 'admin') {
+      setCurrentUser(null);
+      return;
+    }
+
+    setCurrentUser(session);
+
     const latestUsersSaved = localStorage.getItem('chatbot_users');
     if (latestUsersSaved) {
       setUsers(JSON.parse(latestUsersSaved));
     }
   };
 
-  // Handle Logout
-  const logoutUser = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('current_user');
-    localStorage.removeItem('logged_in_user');
-    localStorage.removeItem('admin_logged_in');
+  const logoutUser = async () => {
+    try {
+      await logoutApi();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setCurrentUser(null);
+      clearSession();
+    }
   };
 
   // User Action: Add File to Knowledge Base
@@ -258,7 +242,6 @@ export function UserProvider({ children }) {
     <UserContext.Provider value={{
       currentUser,
       users,
-      loginUser,
       logoutUser,
       syncSession,
       addKnowledgeFile,

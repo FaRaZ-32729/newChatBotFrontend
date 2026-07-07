@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Shield, ArrowLeft, Loader2, KeyRound, CheckCircle, Sparkles } from 'lucide-react';
+import { Shield, ArrowLeft, Loader2, KeyRound, CheckCircle, RefreshCw } from 'lucide-react';
+import { regenerateOtpApi, verifyOtpApi } from '../../api/auth.api';
+import { setOtpVerifiedEmail } from '../../utils/authSession';
 
 export default function VerifyOtp() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sandboxOtp, setSandboxOtp] = useState(null);
+  const [isResending, setIsResending] = useState(false);
+  const [showResendOtp, setShowResendOtp] = useState(false);
 
-  // Prefill email from query parameter if available
   useEffect(() => {
     const emailParam = searchParams.get('email');
     if (emailParam) {
@@ -21,31 +23,11 @@ export default function VerifyOtp() {
     }
   }, [searchParams]);
 
-  // Read sandbox simulated OTP for this email if it exists
-  useEffect(() => {
-    if (email) {
-      const lastOtpData = localStorage.getItem('sandbox_last_email_otp');
-      if (lastOtpData) {
-        try {
-          const parsed = JSON.parse(lastOtpData);
-          if (parsed && parsed.email.trim().toLowerCase() === email.trim().toLowerCase()) {
-            setSandboxOtp(parsed.otp);
-          } else {
-            setSandboxOtp(null);
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    } else {
-      setSandboxOtp(null);
-    }
-  }, [email]);
-
-  const handleVerify = (e) => {
+  const handleVerify = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setShowResendOtp(false);
 
     if (!email.trim()) {
       setError('Email address is required.');
@@ -58,48 +40,47 @@ export default function VerifyOtp() {
 
     setIsLoading(true);
 
-    // Simulated short premium delay
-    setTimeout(() => {
-      try {
-        const savedUsers = localStorage.getItem('chatbot_users');
-        const users = savedUsers ? JSON.parse(savedUsers) : [];
-        const cleanEmail = email.trim().toLowerCase();
-        const user = users.find(u => u.email.trim().toLowerCase() === cleanEmail);
+    try {
+      const response = await verifyOtpApi(email.trim().toLowerCase(), otp.trim());
+      setOtpVerifiedEmail(email.trim().toLowerCase());
+      setSuccess(response.message || 'OTP verification successful! Redirecting to set password...');
 
-        if (!user) {
-          setError('No user associated with this email address found.');
-          setIsLoading(false);
-          return;
-        }
-
-        // Check if OTP matches
-        if (user.otp && user.otp.trim() === otp.trim()) {
-          // Update user state to OTP Verified
-          user.otpVerified = true;
-          localStorage.setItem('chatbot_users', JSON.stringify(users));
-          
-          // Store the verified email for the password setting screen
-          localStorage.setItem('otp_verified_email', cleanEmail);
-          
-          setSuccess('OTP verification successful! Redirecting to set password...');
-          
-          setTimeout(() => {
-            navigate('/set-password', { replace: true });
-          }, 1500);
-        } else {
-          setError('The OTP you entered is invalid. Please try again.');
-          setIsLoading(false);
-        }
-      } catch (err) {
-        setError('An error occurred during verification.');
-        setIsLoading(false);
+      setTimeout(() => {
+        navigate('/set-password', { replace: true });
+      }, 1500);
+    } catch (err) {
+      if (err.message === 'OTP expired') {
+        setShowResendOtp(true);
       }
-    }, 600);
+      setError(err.message || 'Verification failed. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!email.trim()) {
+      setError('Email address is required to resend OTP.');
+      return;
+    }
+
+    setIsResending(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await regenerateOtpApi(email.trim().toLowerCase());
+      setShowResendOtp(false);
+      setOtp('');
+      setSuccess(response.message || 'A new OTP has been sent to your email.');
+    } catch (err) {
+      setError(err.message || 'Failed to resend OTP. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
     <div id="verify-otp-container" className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative select-none">
-      {/* Glow Effects */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10">
@@ -116,7 +97,6 @@ export default function VerifyOtp() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10">
         <div className="bg-slate-900/80 backdrop-blur-md py-8 px-5 shadow-2xl rounded-3xl border border-slate-800 sm:px-10">
-          
           <form onSubmit={handleVerify} className="space-y-5">
             {error && (
               <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-4 rounded-2xl flex items-start gap-3 text-xs animate-fade-in">
@@ -140,7 +120,7 @@ export default function VerifyOtp() {
                 id="verify-email"
                 type="email"
                 required
-                disabled={isLoading || !!searchParams.get('email')}
+                disabled={isLoading || isResending || !!searchParams.get('email')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-xs text-slate-200 placeholder-slate-600 disabled:opacity-60"
@@ -157,18 +137,21 @@ export default function VerifyOtp() {
                 type="text"
                 required
                 maxLength={6}
-                disabled={isLoading}
+                disabled={isLoading || isResending}
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => {
+                  setOtp(e.target.value.replace(/\D/g, ''));
+                  if (showResendOtp) setShowResendOtp(false);
+                }}
                 className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 tracking-[0.5em] text-center font-mono font-bold text-lg text-white placeholder-slate-700 transition-all"
                 placeholder="000000"
               />
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 space-y-3">
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isResending}
                 className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-2xl shadow-lg shadow-indigo-600/10 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
@@ -180,27 +163,29 @@ export default function VerifyOtp() {
                   <span>Verify and Proceed</span>
                 )}
               </button>
+
+              {showResendOtp && (
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={isResending || isLoading}
+                  className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-2xl text-xs font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isResending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Resending OTP...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Resend OTP</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </form>
-
-          {/* Sandbox Helper Panel */}
-          {sandboxOtp && (
-            <div className="mt-6 p-4 bg-indigo-950/20 border border-indigo-500/20 rounded-2xl animate-fade-in text-center">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 mb-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                Sandbox Simulated Email Inbox
-              </p>
-              <p className="text-xs text-indigo-300 font-semibold">
-                An email was simulated. Use OTP: <span className="font-mono bg-indigo-950/60 border border-indigo-500/30 px-2 py-0.5 rounded text-white font-bold tracking-wider">{sandboxOtp}</span>
-              </p>
-              <button
-                onClick={() => setOtp(sandboxOtp)}
-                className="mt-2 text-[10px] text-indigo-400 hover:text-indigo-300 font-bold underline cursor-pointer"
-              >
-                Auto-fill Code
-              </button>
-            </div>
-          )}
 
           <div className="mt-6 text-center border-t border-slate-800/60 pt-4">
             <button
@@ -211,7 +196,6 @@ export default function VerifyOtp() {
               Back to Login Portal
             </button>
           </div>
-
         </div>
       </div>
     </div>
