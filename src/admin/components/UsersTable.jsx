@@ -21,8 +21,7 @@ export default function UsersTable({
     return users.filter(user => {
       const matchesSearch =
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (user.platform || '').toLowerCase().includes(searchQuery.toLowerCase());
+        user.email.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesStatus =
         statusFilter === 'all' ||
@@ -49,7 +48,7 @@ export default function UsersTable({
           <input
             id="search-input"
             type="text"
-            placeholder="Search users by name, email, platform..."
+            placeholder="Search users by name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-1.5 text-sm bg-white border border-slate-200 rounded-xl shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800 placeholder-slate-400"

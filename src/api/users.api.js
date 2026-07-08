@@ -21,6 +21,11 @@ export function getUsersByManagerApi(managerId) {
   return apiRequest(`/users/by/${managerId}/`);
 }
 
+// Admin manager detail page: profile + chatbots + users in one shot
+export function getManagerDetailsApi(managerId) {
+  return apiRequest(`/users/manager-details/${managerId}`);
+}
+
 export function deleteClientUserApi(userId) {
   return apiRequest(`/users/client/${userId}`, {
     method: 'DELETE',

@@ -26,6 +26,7 @@ export function AdminProvider({ children }) {
     }, 4000);
   };
 
+  // Load managers + stats from backend
   const fetchManagers = useCallback(async () => {
     setIsLoadingManagers(true);
     try {
@@ -109,95 +110,6 @@ export function AdminProvider({ children }) {
     }
   };
 
-  const toggleUserStatus = (userId) => {
-    setUsers((prev) =>
-      prev.map((u) => {
-        if (u.id === userId) {
-          const nextStatus = u.status === 'active' ? 'inactive' : 'active';
-          showToast(`Changed status for ${u.name} to ${nextStatus}.`);
-          return { ...u, status: nextStatus };
-        }
-        return u;
-      })
-    );
-  };
-
-  const addActivationKey = (userId, key) => {
-    if (!key.trim()) return;
-    setUsers((prev) => prev.map((u) => {
-      if (u.id === userId) {
-        const keys = u.activationKeys || [];
-        if (keys.includes(key.trim().toLowerCase())) return u;
-        return {
-          ...u,
-          activationKeys: [...keys, key.trim().toLowerCase()],
-        };
-      }
-      return u;
-    }));
-    showToast(`Added activation key "${key.trim()}"`);
-  };
-
-  const removeActivationKey = (userId, keyIndex) => {
-    setUsers((prev) => prev.map((u) => {
-      if (u.id === userId) {
-        const keys = u.activationKeys || [];
-        return {
-          ...u,
-          activationKeys: keys.filter((_, idx) => idx !== keyIndex),
-        };
-      }
-      return u;
-    }));
-    showToast('Removed activation key');
-  };
-
-  const updateInstructions = (userId, text) => {
-    setUsers((prev) => prev.map((u) => {
-      if (u.id === userId) {
-        return { ...u, specificInstructions: text };
-      }
-      return u;
-    }));
-    showToast('Instructions updated successfully');
-  };
-
-  const addKnowledgeFile = (userId, fileName, fileSize = '1.5 MB') => {
-    if (!fileName.trim()) return;
-    setUsers((prev) => prev.map((u) => {
-      if (u.id === userId) {
-        const files = u.knowledgeBase || [];
-        return {
-          ...u,
-          knowledgeBase: [
-            ...files,
-            {
-              name: fileName.trim(),
-              size: fileSize,
-              uploadedAt: new Date().toISOString().split('T')[0],
-            },
-          ],
-        };
-      }
-      return u;
-    }));
-    showToast(`Uploaded "${fileName}" to Knowledge Base`);
-  };
-
-  const removeKnowledgeFile = (userId, fileIndex) => {
-    setUsers((prev) => prev.map((u) => {
-      if (u.id === userId) {
-        const files = u.knowledgeBase || [];
-        return {
-          ...u,
-          knowledgeBase: files.filter((_, idx) => idx !== fileIndex),
-        };
-      }
-      return u;
-    }));
-    showToast('Removed document from Knowledge Base');
-  };
-
   const createUser = async ({ name, email, access }) => {
     try {
       const response = await createUserApi({ name, email, access });
@@ -216,6 +128,7 @@ export function AdminProvider({ children }) {
         access: toBackendAccess(updatedFields.access),
       };
 
+      // Only send status if it actually changed
       if (updatedFields.status !== updatedFields.originalStatus) {
         payload.isActive = updatedFields.status === 'active';
         if (updatedFields.status === 'inactive') {
@@ -246,12 +159,6 @@ export function AdminProvider({ children }) {
       toastMessage,
       showToast,
       deleteUser,
-      toggleUserStatus,
-      addActivationKey,
-      removeActivationKey,
-      updateInstructions,
-      addKnowledgeFile,
-      removeKnowledgeFile,
       createUser,
       updateUser,
     }}>

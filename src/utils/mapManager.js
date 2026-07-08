@@ -1,5 +1,6 @@
 import { formatAccessForDisplay } from './access';
 
+// Convert manager API object into the shape the admin UI expects
 export function mapManagerToUser(manager) {
   return {
     id: manager._id,
@@ -9,14 +10,8 @@ export function mapManagerToUser(manager) {
     status: manager.isActive ? 'active' : 'inactive',
     statusReason: manager.suspensionReason || null,
     access: formatAccessForDisplay(manager.access),
-    conversations: 0,
-    lastActive: 'Never',
-    platform: 'Web Widget',
     createdAt: manager.createdAt
       ? new Date(manager.createdAt).toISOString().split('T')[0]
       : '',
-    activationKeys: [],
-    knowledgeBase: [],
-    specificInstructions: '',
   };
 }

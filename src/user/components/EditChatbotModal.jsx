@@ -288,24 +288,6 @@ export default function EditChatbotModal({
               <p className="text-[11px] font-bold text-slate-300">Drag & drop PDFs here, or click to upload</p>
             </div>
 
-            {/* Load Sample helper */}
-            <div className="mt-1.5 flex justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  const samplePDFs = [
-                    { name: 'nexus_user_instructions.pdf', size: '1.4 MB' },
-                    { name: 'calibration_specs_v2.pdf', size: '2.1 MB' }
-                  ];
-                  setEditUploadedPdfs(prev => [...prev, ...samplePDFs]);
-                  showToast('Sample PDFs added!');
-                }}
-                className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold cursor-pointer"
-              >
-                + Add Sample PDFs
-              </button>
-            </div>
-
             {/* List of files */}
             {editUploadedPdfs.length > 0 && (
               <div className="mt-3 space-y-1.5">
