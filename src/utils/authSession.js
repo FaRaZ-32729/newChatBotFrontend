@@ -1,3 +1,5 @@
+import { formatAccessForDisplay } from './access';
+
 const SESSION_KEY = 'logged_in_user';
 
 export function getStoredSession() {
@@ -10,16 +12,21 @@ export function getStoredSession() {
 }
 
 export function saveSession(user) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+  const normalized = {
+    ...user,
+    access: formatAccessForDisplay(user.access),
+  };
 
-  if (user.role === 'admin') {
+  localStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
+
+  if (normalized.role === 'admin') {
     localStorage.setItem('admin_logged_in', 'true');
     localStorage.removeItem('current_user');
     return;
   }
 
   localStorage.removeItem('admin_logged_in');
-  localStorage.setItem('current_user', JSON.stringify(user));
+  localStorage.setItem('current_user', JSON.stringify(normalized));
 }
 
 export function clearSession() {
@@ -45,4 +52,3 @@ export function getOtpVerifiedEmail() {
 export function clearOtpVerifiedEmail() {
   localStorage.removeItem(OTP_VERIFIED_KEY);
 }
-

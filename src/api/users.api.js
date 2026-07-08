@@ -16,3 +16,13 @@ export function deleteManagerApi(managerId) {
     method: 'DELETE',
   });
 }
+
+export function getUsersByManagerApi(managerId) {
+  return apiRequest(`/users/by/${managerId}/`);
+}
+
+export function deleteClientUserApi(userId) {
+  return apiRequest(`/users/client/${userId}`, {
+    method: 'DELETE',
+  });
+}
