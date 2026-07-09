@@ -11,6 +11,11 @@ export function getMyChatbotsApi() {
   return apiRequest('/chatbot/my');
 }
 
+/** Public chatbot info for shareable /chatbot/:id URL (no login) */
+export function getPublicChatbotApi(id) {
+  return apiRequest(`/chatbot/public/${id}`);
+}
+
 export function deleteChatbotApi(id) {
   return apiRequest(`/chatbot/delete/${id}`, {
     method: 'DELETE',
