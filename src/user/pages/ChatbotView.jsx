@@ -1,5 +1,5 @@
 /**
- * ChatbotView — session auto-connects; one tap enables microphone (browser requirement).
+ * ChatbotView — opens ready with mic on; End Chat during conversation.
  */
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { useGeminiLive } from '../../voice/hooks/useGeminiLive';
 import ImageSlideshow from '../../voice/components/ImageSlideshow';
 import LeadFormOverlay from '../../voice/components/LeadFormOverlay';
 import CardScanner from '../../voice/components/CardScanner';
+import SpeakerAngle from '../../voice/components/SpeakerAngle';
 
 export default function ChatbotView() {
   const { chatbotId } = useParams();
@@ -18,26 +19,34 @@ export default function ChatbotView() {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const {
-    sessionStarted,
     isActivated,
+    canShowEndChat,
     isListening,
     isSpeaking,
     stage,
     error,
     slides,
     currentSlideIndex,
+    carouselHoldMs,
+    autoAdvanceSlides,
     leadForm,
     showLeadForm,
     showCamera,
     leadSaved,
+    leadSubmitting,
+    leadFormEditable,
     activationKey,
-    activePdfName,
-    needsMicTap,
-    enableVoice,
+    endChat,
     closeCamera,
+    handleCardScanned,
+    openCameraForRescan,
+    confirmLeadForm,
+    cancelLeadForm,
   } = useGeminiLive(chatbotId);
 
-  const showOnboarding = slides.length === 0 && !showLeadForm;
+  const showOnboarding = slides.length === 0 && !showLeadForm && !showCamera;
+  const showEndChat =
+    isActivated && canShowEndChat && !showCamera && !showLeadForm && !leadSaved;
 
   useEffect(() => {
     if (!chatbotId) return;
@@ -54,6 +63,7 @@ export default function ChatbotView() {
           id: bot._id,
           name: bot.name,
           onboardingImage: resolveAssetUrl(bot.onboardingImage),
+          activationKey: bot.activationKey || '',
         });
       } catch (err) {
         if (cancelled) return;
@@ -87,11 +97,28 @@ export default function ChatbotView() {
       <ImageSlideshow
         slides={slides}
         currentIndex={currentSlideIndex}
+        holdMs={carouselHoldMs}
+        autoAdvance={autoAdvanceSlides}
       />
 
-      <LeadFormOverlay data={leadForm} visible={showLeadForm} />
+      <LeadFormOverlay
+        data={leadForm}
+        visible={showLeadForm}
+        editable={leadFormEditable}
+        submitting={leadSubmitting}
+        onConfirm={confirmLeadForm}
+        onRescan={leadFormEditable ? openCameraForRescan : undefined}
+        onCancel={leadFormEditable ? cancelLeadForm : undefined}
+      />
 
-      <CardScanner active={showCamera} onClose={closeCamera} />
+      <CardScanner
+        active={showCamera}
+        onClose={closeCamera}
+        onScanned={handleCardScanned}
+      />
+
+      {/* Active conversation → track speaking face angle → MQTT */}
+      <SpeakerAngle isActive={isActivated && !showCamera} />
 
       {leadSaved && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] px-5 py-2.5 rounded-xl bg-emerald-600/95 text-white text-sm shadow-lg">
@@ -105,20 +132,20 @@ export default function ChatbotView() {
         </div>
       )}
 
-      {needsMicTap && sessionStarted && !isListening && (
+      {showEndChat && (
         <button
           type="button"
-          onClick={enableVoice}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 px-8 py-4 rounded-2xl bg-white/15 border border-white/30 text-white text-base font-medium backdrop-blur-md shadow-xl hover:bg-white/25 transition-colors"
+          onClick={endChat}
+          className="absolute top-5 right-5 z-50 px-5 py-2.5 rounded-xl bg-rose-600/90 border border-rose-400/40 text-white text-sm font-medium backdrop-blur-md shadow-xl hover:bg-rose-500 transition-colors"
         >
-          Tap to start talking
+          End Chat
         </button>
       )}
 
-      {isListening && !isActivated && (
+      {isListening && !isActivated && !showCamera && (
         <div className="absolute top-6 left-0 right-0 z-40 text-center pointer-events-none px-4">
           <p className="text-amber-300/90 text-sm">
-            Say hello, &quot;{activationKey || chatbot.name}&quot;, or &quot;{chatbot.name}&quot;
+            Say &quot;{(activationKey || chatbot.activationKey || '').trim() || 'your activation phrase'}&quot; to start
           </p>
         </div>
       )}
@@ -126,10 +153,10 @@ export default function ChatbotView() {
       {stage === 'connecting' && (
         <div className="absolute inset-0 z-20 pointer-events-none ring-[3px] ring-inset ring-slate-600/30" />
       )}
-      {isListening && (
+      {isListening && !showCamera && !showLeadForm && (
         <div className="absolute inset-0 z-20 pointer-events-none ring-[6px] ring-inset ring-rose-500/50 animate-pulse" />
       )}
-      {isSpeaking && (
+      {isSpeaking && !showCamera && !showLeadForm && (
         <div className="absolute inset-0 z-20 pointer-events-none ring-[4px] ring-inset ring-emerald-400/35" />
       )}
 

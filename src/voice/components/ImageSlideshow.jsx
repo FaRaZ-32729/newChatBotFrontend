@@ -1,28 +1,54 @@
 import { useEffect, useRef, useState } from 'react';
 import { resolveAssetUrl } from '../../utils/mapChatbot';
 
-/** Slideshow — clean fullscreen images only, no PDF/page labels */
-export default function ImageSlideshow({ slides = [], currentIndex = 0 }) {
+/**
+ * Slideshow — fullscreen images.
+ * - 1 slide → static
+ * - N related slides → gentle auto-advance (paused/resets on AI image_sync)
+ */
+export default function ImageSlideshow({
+  slides = [],
+  currentIndex = 0,
+  holdMs = 4500,
+  autoAdvance = true,
+}) {
   const [active, setActive] = useState(0);
   const slidesKeyRef = useRef('');
-  const lastIndexRef = useRef(0);
+  const userSyncRef = useRef(0);
 
   useEffect(() => {
-    if (!slides.length) return;
-    const idx = Math.min(Math.max(0, currentIndex), slides.length - 1);
-    if (idx !== lastIndexRef.current) {
-      lastIndexRef.current = idx;
-      setActive(idx);
+    if (!slides.length) {
+      slidesKeyRef.current = '';
+      setActive(0);
+      return;
     }
-  }, [currentIndex, slides.length]);
 
-  useEffect(() => {
     const key = slides.map((s) => s.id ?? s.url).join('|');
-    if (!slides.length || key === slidesKeyRef.current) return;
-    slidesKeyRef.current = key;
-    lastIndexRef.current = 0;
-    setActive(0);
-  }, [slides]);
+    const idx = Math.min(Math.max(0, currentIndex), slides.length - 1);
+
+    if (key !== slidesKeyRef.current) {
+      slidesKeyRef.current = key;
+      setActive(idx);
+      userSyncRef.current = Date.now();
+      return;
+    }
+
+    setActive(idx);
+    userSyncRef.current = Date.now();
+  }, [slides, currentIndex]);
+
+  // Auto-advance only when multiple related slides are showing
+  useEffect(() => {
+    if (!autoAdvance || slides.length <= 1 || !holdMs || holdMs < 800) return undefined;
+
+    const timer = setInterval(() => {
+      // Don't fight a very recent AI sync
+      if (Date.now() - userSyncRef.current < holdMs * 0.6) return;
+      setActive((prev) => (prev + 1) % slides.length);
+    }, holdMs);
+
+    return () => clearInterval(timer);
+  }, [slides, holdMs, autoAdvance]);
 
   if (!slides.length) return null;
 

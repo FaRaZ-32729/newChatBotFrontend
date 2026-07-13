@@ -1,5 +1,6 @@
 /**
- * Play PCM audio chunks from Gemini Live — supports instant interrupt.
+ * Play PCM audio chunks from Gemini Live — seamless queue, instant interrupt.
+ * Keeps one AudioContext alive so speech does not cut between chunks.
  */
 let playbackContext = null;
 let nextPlayTime = 0;
@@ -39,17 +40,20 @@ export function playLiveAudioChunk(base64, mimeType) {
   const mime = String(mimeType || '').toLowerCase();
 
   let sampleRate = 24000;
-  const pcmData = bytes;
-
   if (mime.includes('l16') || mime.includes('pcm')) {
     sampleRate = getSampleRateFromMime(mimeType);
   }
 
-  const int16 = new Int16Array(pcmData.buffer, pcmData.byteOffset, pcmData.byteLength / 2);
+  // Copy into aligned buffer — avoids Int16Array offset issues on odd byteOffset
+  const aligned = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(aligned).set(bytes);
+  const int16 = new Int16Array(aligned);
   const float32 = new Float32Array(int16.length);
   for (let i = 0; i < int16.length; i += 1) {
     float32[i] = int16[i] / 32768;
   }
+
+  if (!float32.length) return;
 
   const buffer = ctx.createBuffer(1, float32.length, sampleRate);
   buffer.copyToChannel(float32, 0);
@@ -64,12 +68,58 @@ export function playLiveAudioChunk(base64, mimeType) {
   };
 
   const now = ctx.currentTime;
-  const startAt = Math.max(now, nextPlayTime);
-  source.start(startAt);
-  nextPlayTime = startAt + buffer.duration;
+  // Small lookahead so late network chunks still schedule without gaps/clicks
+  const startAt = Math.max(now + 0.035, nextPlayTime);
+  try {
+    source.start(startAt);
+    nextPlayTime = startAt + buffer.duration;
+  } catch (err) {
+    console.warn('[Audio] schedule failed:', err.message);
+    activeSources = activeSources.filter((s) => s !== source);
+  }
 }
 
-/** Stop all queued bot audio immediately (barge-in / interrupt). */
+/** True while bot audio is still queued or playing. */
+export function isPlaybackBusy() {
+  if (!playbackContext || playbackContext.state === 'closed') {
+    return activeSources.length > 0;
+  }
+  return activeSources.length > 0 || nextPlayTime > playbackContext.currentTime + 0.05;
+}
+
+/**
+ * Wait until speakers finish after turn_complete — keeps mic muted so echo
+ * does not cut the answer mid-playback.
+ */
+export function whenPlaybackIdle(onIdle, { pollMs = 50, cushionMs = 320 } = {}) {
+  let cancelled = false;
+  let timer = null;
+
+  const finish = () => {
+    if (cancelled) return;
+    timer = setTimeout(() => {
+      if (!cancelled) onIdle?.();
+    }, cushionMs);
+  };
+
+  const tick = () => {
+    if (cancelled) return;
+    if (isPlaybackBusy()) {
+      timer = setTimeout(tick, pollMs);
+      return;
+    }
+    finish();
+  };
+
+  tick();
+
+  return () => {
+    cancelled = true;
+    if (timer) clearTimeout(timer);
+  };
+}
+
+/** Stop queued bot audio immediately (barge-in) — keep AudioContext alive. */
 export function stopLivePlayback() {
   for (const source of activeSources) {
     try {
@@ -80,10 +130,20 @@ export function stopLivePlayback() {
     }
   }
   activeSources = [];
-  nextPlayTime = 0;
 
+  if (playbackContext && playbackContext.state !== 'closed') {
+    nextPlayTime = playbackContext.currentTime;
+  } else {
+    nextPlayTime = 0;
+  }
+}
+
+/** Full teardown on session leave. */
+export function disposeLivePlayback() {
+  stopLivePlayback();
   if (playbackContext && playbackContext.state !== 'closed') {
     playbackContext.close().catch(() => {});
   }
   playbackContext = null;
+  nextPlayTime = 0;
 }
