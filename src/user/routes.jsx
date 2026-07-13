@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import UserHome from './pages/UserHome';
 import ChatbotView from './pages/ChatbotView';
+import ChatbotLeads from './pages/ChatbotLeads';
 import Login from '../admin/pages/Login';
 import VerifyOtp from './pages/VerifyOtp';
 import SetPassword from './pages/SetPassword';
@@ -14,6 +15,7 @@ export default function UserRoutes() {
       <Route path="set-password" element={<SetPassword />} />
       <Route path="forgot-password" element={<ForgotPassword />} />
       <Route path="" element={<UserHome />} />
+      <Route path="chatbot/:chatbotId/leads" element={<ChatbotLeads />} />
       <Route path="chatbot/:chatbotId" element={<ChatbotView />} />
       {/* Fallback back to user index or redirect */}
       <Route path="*" element={<Navigate to="" replace />} />

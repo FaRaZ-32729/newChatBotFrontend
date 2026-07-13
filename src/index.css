@@ -1,28 +1,35 @@
 @import "tailwindcss";
 
-/* Sleek modern custom scrollbar utility */
+/* Theme scrollbar — slate track, soft indigo thumb */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #0f172a; /* slate-900 */
-  border-radius: 9999px;
+  background: transparent;
+  margin: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #312e81; /* indigo-900 */
+  background: linear-gradient(180deg, #4338ca 0%, #312e81 100%);
   border-radius: 9999px;
+  border: 2px solid #0f172a;
+  background-clip: padding-box;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #4f46e5; /* indigo-600 */
+  background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+  border: 2px solid #0f172a;
+  background-clip: padding-box;
 }
 
-/* Firefox support */
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #312e81 #0f172a;
+  scrollbar-color: #4338ca transparent;
 }
-

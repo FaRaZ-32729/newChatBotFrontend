@@ -46,7 +46,7 @@ function waitForMediaPipe(timeoutMs = 15000) {
   });
 }
 
-export default function SpeakerAngle({ isActive }) {
+export default function SpeakerAngle({ isActive, chatbotId }) {
   const videoRef = useRef(null);
   const cameraRef = useRef(null);
   const streamRef = useRef(null);
@@ -58,13 +58,21 @@ export default function SpeakerAngle({ isActive }) {
   const [status, setStatus] = useState('Idle');
 
   const sendAngleToBackend = useCallback(async (angle) => {
+    if (!chatbotId) {
+      console.warn('⚠️ SpeakerAngle: chatbotId missing — angle not sent');
+      return;
+    }
+
     try {
-      console.log(`🔥 Sending Angle to Backend: ${angle}°`);
+      console.log(`🔥 Sending Angle to Backend: ${angle}° | chatbotId=${chatbotId}`);
 
       const response = await fetch(`${API_ORIGIN}/api/send-angle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ angle: parseFloat(angle.toFixed(1)) }),
+        body: JSON.stringify({
+          angle: parseFloat(angle.toFixed(1)),
+          chatbotId,
+        }),
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -74,7 +82,7 @@ export default function SpeakerAngle({ isActive }) {
     } catch (err) {
       console.error('❌ Failed to send angle to backend:', err.message);
     }
-  }, []);
+  }, [chatbotId]);
 
   useEffect(() => {
     if (!isActive) {

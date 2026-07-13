@@ -1,5 +1,18 @@
 import { useState } from 'react';
-import { X, Settings, Upload, FileUp, Shield, Trash2 } from 'lucide-react';
+import { X, Settings, Upload, FileUp, Trash2, Loader2 } from 'lucide-react';
+
+function mapExistingPdfs(chatbot) {
+  if (chatbot?.knowledgeBasePdfs && Array.isArray(chatbot.knowledgeBasePdfs)) {
+    return chatbot.knowledgeBasePdfs.map((p) => ({
+      name: p.name,
+      size: p.size || '',
+      url: p.url || '',
+      isExisting: Boolean(p.url),
+      file: null,
+    }));
+  }
+  return [];
+}
 
 export default function EditChatbotModal({
   chatbot,
@@ -7,25 +20,16 @@ export default function EditChatbotModal({
   onUpdateChatbot,
   hasHeadMovement,
   hasHandMovement,
-  showToast
+  showToast,
 }) {
   const [editBotName, setEditBotName] = useState(chatbot?.name || '');
   const [editSelectedAvatar, setEditSelectedAvatar] = useState(
-    chatbot?.onboardingImage || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80'
+    chatbot?.onboardingImage
+      || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80'
   );
+  const [avatarFile, setAvatarFile] = useState(null);
   const [editIsDragOver, setEditIsDragOver] = useState(false);
-  const [editUploadedPdfs, setEditUploadedPdfs] = useState(() => {
-    if (chatbot?.knowledgeBasePdfs && Array.isArray(chatbot.knowledgeBasePdfs)) {
-      return chatbot.knowledgeBasePdfs;
-    }
-    if (chatbot?.knowledgeBasePdf) {
-      return chatbot.knowledgeBasePdf.split(',').map(name => ({
-        name: name.trim(),
-        size: '1.2 MB'
-      }));
-    }
-    return [];
-  });
+  const [editUploadedPdfs, setEditUploadedPdfs] = useState(() => mapExistingPdfs(chatbot));
   const [editIsPdfDragOver, setEditIsPdfDragOver] = useState(false);
   const [editScanCardRequired, setEditScanCardRequired] = useState(chatbot?.scanCardRequired ?? false);
   const [editActivationKeyword, setEditActivationKeyword] = useState(chatbot?.activationKey || '');
@@ -36,54 +40,51 @@ export default function EditChatbotModal({
   const [editHandMovementByeChatEnds, setEditHandMovementByeChatEnds] = useState(chatbot?.handMovements?.bye?.chatEnds ?? true);
   const [editHandMovementThumbsDetect, setEditHandMovementThumbsDetect] = useState(chatbot?.handMovements?.thumbsUp?.detects ?? true);
   const [editHandMovementThumbsCorrect, setEditHandMovementThumbsCorrect] = useState(chatbot?.handMovements?.thumbsUp?.correctInfo ?? true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Edit avatar handlers
-  const handleEditImageFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        showToast('Please upload an image file (png, jpeg, webp)!');
-        return;
+  const applyAvatarFile = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Please upload an image file (png, jpeg, webp)!');
+      return;
+    }
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setEditSelectedAvatar(reader.result);
+      showToast('Edit avatar updated!');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addPdfFiles = (fileList) => {
+    if (!fileList?.length) return;
+    const newPdfs = [];
+    for (let i = 0; i < fileList.length; i += 1) {
+      const file = fileList[i];
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showToast(`File "${file.name}" is not a PDF!`);
+        continue;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        setEditSelectedAvatar(reader.result);
-        showToast('Edit avatar updated!');
-      };
-      reader.readAsDataURL(file);
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      newPdfs.push({
+        name: file.name,
+        size: `${sizeMb} MB`,
+        url: '',
+        isExisting: false,
+        file,
+      });
+    }
+    if (newPdfs.length > 0) {
+      setEditUploadedPdfs((prev) => [...prev, ...newPdfs]);
+      showToast(`Added ${newPdfs.length} PDF(s)!`);
     }
   };
 
-  const handleEditDragOver = (e) => {
+  const handleUpdateSubmit = async (e) => {
     e.preventDefault();
-    setEditIsDragOver(true);
-  };
+    if (isSaving) return;
 
-  const handleEditDragLeave = () => {
-    setEditIsDragOver(false);
-  };
-
-  const handleEditDrop = (e) => {
-    e.preventDefault();
-    setEditIsDragOver(false);
-    const file = e.dataTransfer?.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        showToast('Please upload an image file (png, jpeg, webp)!');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        setEditSelectedAvatar(reader.result);
-        showToast('Edit avatar updated!');
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Handle Chatbot Update form submit
-  const handleUpdateSubmit = (e) => {
-    e.preventDefault();
     if (!editBotName.trim()) {
       showToast('Chatbot Name is required!');
       return;
@@ -101,33 +102,64 @@ export default function EditChatbotModal({
       return;
     }
 
-    const updatedBot = {
-      name: editBotName.trim(),
-      onboardingImage: editSelectedAvatar,
-      knowledgeBasePdf: editUploadedPdfs.map(p => p.name).join(', '),
-      knowledgeBasePdfs: editUploadedPdfs,
-      activationKey: editActivationKeyword.trim().toLowerCase(),
-      specificInstructions: editBotInstructions.trim(),
-      scanCardRequired: editScanCardRequired,
-      headMovementMode: hasHeadMovement ? editHeadMovementMode : null,
-      handMovements: hasHandMovement ? {
-        hi: {
-          detects: editHandMovementHiDetect,
-          saysHi: editHandMovementHiSaysHi
-        },
-        bye: {
-          chatEnds: editHandMovementByeChatEnds
-        },
-        thumbsUp: {
-          detects: editHandMovementThumbsDetect,
-          correctInfo: editHandMovementThumbsCorrect
-        }
-      } : null
-    };
+    const formData = new FormData();
+    formData.append('name', editBotName.trim());
+    formData.append('activationKey', editActivationKeyword.trim().toLowerCase());
+    formData.append('specificInstructions', editBotInstructions.trim());
+    formData.append('scanCardRequired', String(editScanCardRequired));
 
-    onUpdateChatbot(chatbot.id, updatedBot);
-    showToast(`Successfully updated "${editBotName.trim()}" chatbot!`);
-    onClose();
+    if (hasHeadMovement) {
+      formData.append('headMovementMode', editHeadMovementMode);
+    }
+
+    if (hasHandMovement) {
+      formData.append(
+        'handMovements',
+        JSON.stringify({
+          hi: {
+            detects: editHandMovementHiDetect,
+            saysHi: editHandMovementHiSaysHi,
+          },
+          bye: {
+            chatEnds: editHandMovementByeChatEnds,
+          },
+          thumbsUp: {
+            detects: editHandMovementThumbsDetect,
+            correctInfo: editHandMovementThumbsCorrect,
+          },
+        })
+      );
+    }
+
+    const retainedPdfUrls = editUploadedPdfs
+      .filter((p) => p.isExisting && p.url)
+      .map((p) => p.url);
+    formData.append('retainedPdfUrls', JSON.stringify(retainedPdfUrls));
+
+    editUploadedPdfs
+      .filter((p) => !p.isExisting && p.file)
+      .forEach((p) => {
+        formData.append('knowledgeBasePdfs', p.file);
+      });
+
+    if (avatarFile) {
+      formData.append('onboardingImage', avatarFile);
+    }
+
+    setIsSaving(true);
+    try {
+      const result = await onUpdateChatbot(chatbot.id, formData);
+      if (result?.success) {
+        showToast(result.message || `Successfully updated "${editBotName.trim()}"!`);
+        onClose();
+      } else {
+        showToast(result?.message || 'Update failed. No changes were applied.');
+      }
+    } catch (err) {
+      showToast(err?.message || 'Update failed. No changes were applied.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -136,7 +168,8 @@ export default function EditChatbotModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
+          disabled={isSaving}
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors cursor-pointer disabled:opacity-50"
         >
           <X className="w-5 h-5" />
         </button>
@@ -147,12 +180,11 @@ export default function EditChatbotModal({
           </div>
           <div>
             <h3 className="text-lg font-black text-white">Edit Chatbot</h3>
-            <p className="text-[11px] text-slate-500">Update your chatbot's settings.</p>
+            <p className="text-[11px] text-slate-500">Update settings, PDFs, and triggers. Unchanged fields stay as-is.</p>
           </div>
         </div>
 
         <form onSubmit={handleUpdateSubmit} className="space-y-5 text-left">
-          {/* Chatbot Name */}
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
               Name
@@ -162,33 +194,36 @@ export default function EditChatbotModal({
               required
               value={editBotName}
               onChange={(e) => setEditBotName(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs text-white"
+              disabled={isSaving}
+              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-2xl text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
             />
           </div>
 
-          {/* Onboarding Image upload */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
-              <Upload className="w-3.5 h-3.5 text-indigo-400" />
-              Avatar Image
+            <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
+              Onboarding Image
             </label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex flex-col items-center justify-center p-3 bg-slate-950 border border-slate-800 rounded-2xl">
-                <span className="text-[9px] font-mono font-bold text-indigo-400 uppercase tracking-widest mb-1.5 block">Preview</span>
-                <img
-                  src={editSelectedAvatar}
-                  alt="Avatar Preview"
-                  referrerPolicy="no-referrer"
-                  className="w-16 h-16 rounded-xl object-cover border border-slate-800 shadow-md"
-                />
-              </div>
-              <div 
-                onDragOver={handleEditDragOver}
-                onDragLeave={handleEditDragLeave}
-                onDrop={handleEditDrop}
-                className={`md:col-span-2 flex flex-col items-center justify-center border border-dashed rounded-2xl p-4 transition-all relative text-center cursor-pointer ${
-                  editIsDragOver 
-                    ? 'border-indigo-500 bg-indigo-500/5 animate-pulse' 
+            <div className="flex items-center gap-4">
+              <img
+                src={editSelectedAvatar}
+                alt="Avatar"
+                referrerPolicy="no-referrer"
+                className="w-16 h-16 rounded-2xl object-cover border border-slate-800"
+              />
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setEditIsDragOver(true);
+                }}
+                onDragLeave={() => setEditIsDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setEditIsDragOver(false);
+                  applyAvatarFile(e.dataTransfer?.files?.[0]);
+                }}
+                className={`flex-1 border-2 border-dashed rounded-2xl p-3 text-center relative transition-all ${
+                  editIsDragOver
+                    ? 'border-indigo-500 bg-indigo-500/5'
                     : 'border-slate-800 hover:border-indigo-500/30 bg-slate-950/40'
                 }`}
               >
@@ -196,63 +231,35 @@ export default function EditChatbotModal({
                   type="file"
                   id="edit-avatar-upload"
                   accept="image/*"
-                  onChange={handleEditImageFileChange}
+                  disabled={isSaving}
+                  onChange={(e) => applyAvatarFile(e.target.files?.[0])}
                   className="absolute inset-0 opacity-0 cursor-pointer z-10"
                 />
-                <p className="text-[11px] font-bold text-slate-300">Drag and drop an image here, or click to upload</p>
-                <label 
-                  htmlFor="edit-avatar-upload" 
-                  className="mt-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black rounded-lg transition-all cursor-pointer inline-flex items-center gap-1 shadow-md shadow-indigo-600/15"
-                >
-                  <FileUp className="w-3 h-3" />
-                  <span>Upload</span>
-                </label>
+                <Upload className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
+                <p className="text-[10px] font-bold text-slate-400">Replace image (optional)</p>
               </div>
             </div>
           </div>
 
-          {/* Knowledge Base PDF Name */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
-              <FileUp className="w-3.5 h-3.5 text-indigo-400" />
-              Knowledge Base PDFs <span className="text-rose-500">*</span>
+            <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
+              Knowledge Base PDFs
             </label>
-            <p className="text-[11px] text-slate-500 mb-2 leading-relaxed">
-              Upload multiple PDF documents from your computer.
-            </p>
-
-            {/* Dropzone for Edit */}
-            <div 
-              onDragOver={(e) => { e.preventDefault(); setEditIsPdfDragOver(true); }}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setEditIsPdfDragOver(true);
+              }}
               onDragLeave={() => setEditIsPdfDragOver(false)}
               onDrop={(e) => {
                 e.preventDefault();
                 setEditIsPdfDragOver(false);
-                const files = e.dataTransfer?.files;
-                if (files && files.length > 0) {
-                  const newPdfs = [];
-                  for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    if (!file.name.toLowerCase().endsWith('.pdf')) {
-                      showToast(`File "${file.name}" is not a PDF!`);
-                      continue;
-                    }
-                    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-                    newPdfs.push({
-                      name: file.name,
-                      size: `${sizeMb} MB`
-                    });
-                  }
-                  if (newPdfs.length > 0) {
-                    setEditUploadedPdfs(prev => [...prev, ...newPdfs]);
-                    showToast(`Added ${newPdfs.length} PDF(s) from PC!`);
-                  }
-                }
+                addPdfFiles(e.dataTransfer?.files);
               }}
-              className={`border-2 border-dashed rounded-2xl p-4 text-center relative group transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
-                editIsPdfDragOver 
-                  ? 'border-indigo-500 bg-indigo-500/5' 
-                  : 'border-slate-800 hover:border-indigo-500/30 bg-slate-950/40 hover:bg-slate-950/80'
+              className={`border-2 border-dashed rounded-2xl p-4 text-center relative transition-all flex flex-col items-center justify-center gap-1.5 ${
+                editIsPdfDragOver
+                  ? 'border-indigo-500 bg-indigo-500/5'
+                  : 'border-slate-800 hover:border-indigo-500/30 bg-slate-950/40'
               }`}
             >
               <input
@@ -260,64 +267,48 @@ export default function EditChatbotModal({
                 id="edit-pdf-multiple"
                 multiple
                 accept=".pdf"
+                disabled={isSaving}
                 onChange={(e) => {
-                  const files = e.target.files;
-                  if (files && files.length > 0) {
-                    const newPdfs = [];
-                    for (let i = 0; i < files.length; i++) {
-                      const file = files[i];
-                      if (!file.name.toLowerCase().endsWith('.pdf')) {
-                        showToast(`File "${file.name}" is not a PDF!`);
-                        continue;
-                      }
-                      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-                      newPdfs.push({
-                        name: file.name,
-                        size: `${sizeMb} MB`
-                      });
-                    }
-                    if (newPdfs.length > 0) {
-                      setEditUploadedPdfs(prev => [...prev, ...newPdfs]);
-                      showToast(`Added ${newPdfs.length} PDF(s) from PC!`);
-                    }
-                  }
+                  addPdfFiles(e.target.files);
+                  e.target.value = '';
                 }}
                 className="absolute inset-0 opacity-0 cursor-pointer z-10"
               />
               <FileUp className="w-5 h-5 text-indigo-400" />
-              <p className="text-[11px] font-bold text-slate-300">Drag & drop PDFs here, or click to upload</p>
+              <p className="text-[11px] font-bold text-slate-300">Add new PDFs (optional)</p>
             </div>
 
-            {/* List of files */}
             {editUploadedPdfs.length > 0 && (
               <div className="mt-3 space-y-1.5">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
                   Documents ({editUploadedPdfs.length})
                 </span>
-                <div className="max-h-32 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
                   {editUploadedPdfs.map((pdf, idx) => (
-                    <div 
-                      key={idx}
+                    <div
+                      key={`${pdf.name}-${pdf.url || idx}`}
                       className="flex items-center justify-between p-2.5 bg-slate-950 border border-slate-800 rounded-xl"
                     >
-                      <div className="flex items-center gap-2 overflow-hidden">
+                      <div className="flex items-center gap-2 overflow-hidden min-w-0">
                         <FileUp className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                        <div className="overflow-hidden">
+                        <div className="overflow-hidden min-w-0">
                           <p className="text-[11px] text-slate-200 font-mono truncate" title={pdf.name}>
                             {pdf.name}
                           </p>
                           <span className="text-[8px] text-slate-500 font-mono">
                             {pdf.size}
+                            {pdf.isExisting ? ' · saved' : ' · new'}
                           </span>
                         </div>
                       </div>
                       <button
                         type="button"
+                        disabled={isSaving}
                         onClick={() => {
-                          setEditUploadedPdfs(prev => prev.filter((_, i) => i !== idx));
-                          showToast('Document removed.');
+                          setEditUploadedPdfs((prev) => prev.filter((_, i) => i !== idx));
+                          showToast(pdf.isExisting ? 'PDF marked for removal on save.' : 'New PDF removed.');
                         }}
-                        className="p-1 bg-slate-900 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/20 rounded-md transition-all cursor-pointer shrink-0"
+                        className="p-1 bg-slate-900 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/20 rounded-md transition-all cursor-pointer shrink-0 disabled:opacity-50"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -328,7 +319,6 @@ export default function EditChatbotModal({
             )}
           </div>
 
-          {/* Activation Gesture Keyword */}
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
               Trigger Keyword
@@ -338,32 +328,31 @@ export default function EditChatbotModal({
               required
               value={editActivationKeyword}
               onChange={(e) => setEditActivationKeyword(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs text-white font-mono"
+              disabled={isSaving}
+              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-2xl text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
             />
           </div>
 
-          {/* Specific Instructions */}
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
-              Instructions
+              Specific Instructions
             </label>
             <textarea
-              rows={3}
               required
+              rows={4}
               value={editBotInstructions}
               onChange={(e) => setEditBotInstructions(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+              disabled={isSaving}
+              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed disabled:opacity-50"
             />
           </div>
 
-          {/* Mechanical Movement Settings */}
           {(hasHeadMovement || hasHandMovement) && (
             <div className="bg-slate-950/40 p-4 rounded-2xl border border-slate-800 space-y-3">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-850 pb-1.5">
                 Movement Settings
               </span>
 
-              {/* Head Movement */}
               {hasHeadMovement && (
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-bold text-slate-500 uppercase">Head Trigger</label>
@@ -371,13 +360,14 @@ export default function EditChatbotModal({
                     {[
                       { id: 'detecting', label: 'By detecting' },
                       { id: 'talking', label: 'By talking' },
-                      { id: 'both', label: 'By both' }
+                      { id: 'both', label: 'By both' },
                     ].map((item) => (
                       <button
                         key={item.id}
                         type="button"
+                        disabled={isSaving}
                         onClick={() => setEditHeadMovementMode(item.id)}
-                        className={`py-1.5 rounded-lg border text-[10px] font-bold transition-all cursor-pointer text-center ${
+                        className={`py-1.5 rounded-lg border text-[10px] font-bold transition-all cursor-pointer text-center disabled:opacity-50 ${
                           editHeadMovementMode === item.id
                             ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300'
                             : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
@@ -390,105 +380,66 @@ export default function EditChatbotModal({
                 </div>
               )}
 
-              {/* Hand Movement */}
               {hasHandMovement && (
                 <div className={`space-y-2 pt-2 ${hasHeadMovement ? 'border-t border-slate-850' : ''}`}>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase">Hand Gestures</label>
                   <div className="space-y-2 text-left">
-                    <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={editHandMovementHiDetect}
-                        onChange={(e) => setEditHandMovementHiDetect(e.target.checked)}
-                        className="rounded border-slate-800 text-indigo-600 bg-slate-950 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                      />
-                      <span>Wave on hello</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={editHandMovementHiSaysHi}
-                        onChange={(e) => setEditHandMovementHiSaysHi(e.target.checked)}
-                        className="rounded border-slate-800 text-indigo-600 bg-slate-950 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                      />
-                      <span>Wave when bot speaks</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={editHandMovementByeChatEnds}
-                        onChange={(e) => setEditHandMovementByeChatEnds(e.target.checked)}
-                        className="rounded border-slate-800 text-indigo-600 bg-slate-950 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                      />
-                      <span>Wave on goodbye</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={editHandMovementThumbsDetect}
-                        onChange={(e) => setEditHandMovementThumbsDetect(e.target.checked)}
-                        className="rounded border-slate-800 text-indigo-600 bg-slate-950 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                      />
-                      <span>Thumbs up on acknowledge</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={editHandMovementThumbsCorrect}
-                        onChange={(e) => setEditHandMovementThumbsCorrect(e.target.checked)}
-                        className="rounded border-slate-800 text-indigo-600 bg-slate-950 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                      />
-                      <span>Thumbs up on confirmation</span>
-                    </label>
+                    {[
+                      [editHandMovementHiDetect, setEditHandMovementHiDetect, 'Wave on hello'],
+                      [editHandMovementHiSaysHi, setEditHandMovementHiSaysHi, 'Wave when bot speaks'],
+                      [editHandMovementByeChatEnds, setEditHandMovementByeChatEnds, 'Wave on goodbye'],
+                      [editHandMovementThumbsDetect, setEditHandMovementThumbsDetect, 'Thumbs up on acknowledge'],
+                      [editHandMovementThumbsCorrect, setEditHandMovementThumbsCorrect, 'Thumbs up on confirmation'],
+                    ].map(([checked, setChecked, label]) => (
+                      <label key={label} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={isSaving}
+                          onChange={(e) => setChecked(e.target.checked)}
+                          className="rounded border-slate-800 text-indigo-600 bg-slate-950 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Security & Card Scanning Protocol */}
           <div className="bg-slate-950/40 p-4 rounded-2xl border border-slate-800 space-y-2 text-left">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-850 pb-1.5">
               Security Protocol
             </span>
-            <p className="text-[10px] text-slate-500 leading-relaxed">
-              When active, users are required to complete card scanning authentication prior to starting their chat session.
-            </p>
             <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer hover:text-white py-1">
               <input
                 type="checkbox"
                 checked={editScanCardRequired}
+                disabled={isSaving}
                 onChange={(e) => setEditScanCardRequired(e.target.checked)}
                 className="rounded border-slate-800 text-indigo-600 bg-slate-950 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
               />
               <span className="font-bold">Scan Card</span>
             </label>
-            {editScanCardRequired && (
-              <div className="mt-2.5 pt-2.5 border-t border-slate-900 space-y-1 animate-fade-in">
-                <h5 className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">
-                  End Chat Scan Requirement
-                </h5>
-                <p className="text-[10px] text-slate-500 leading-relaxed">
-                  Require user to scan the card before they end the chat.
-                </p>
-              </div>
-            )}
           </div>
 
-          {/* Action Buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              disabled={isSaving}
+              className="px-4 py-2.5 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-indigo-600/15 cursor-pointer"
+              disabled={isSaving}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-indigo-600/15 cursor-pointer inline-flex items-center gap-2 disabled:opacity-60"
             >
-              Save
+              {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {isSaving ? 'Saving…' : 'Save'}
             </button>
           </div>
         </form>

@@ -9,3 +9,10 @@ export async function submitLeadApi(payload) {
     body: payload,
   });
 }
+
+/**
+ * Fetch leads for one chatbot (authenticated).
+ */
+export async function getChatbotLeadsApi(chatbotId) {
+  return apiRequest(`/leads/chatbot/${chatbotId}`);
+}

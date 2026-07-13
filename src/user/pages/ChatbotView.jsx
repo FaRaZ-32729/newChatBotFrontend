@@ -117,8 +117,8 @@ export default function ChatbotView() {
         onScanned={handleCardScanned}
       />
 
-      {/* Active conversation → track speaking face angle → MQTT */}
-      <SpeakerAngle isActive={isActivated && !showCamera} />
+      {/* Active conversation → track speaking face angle → MQTT (per chatbotId) */}
+      <SpeakerAngle isActive={isActivated && !showCamera} chatbotId={chatbotId} />
 
       {leadSaved && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] px-5 py-2.5 rounded-xl bg-emerald-600/95 text-white text-sm shadow-lg">

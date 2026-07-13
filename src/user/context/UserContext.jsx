@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { createUserApi, logoutApi } from '../../api/auth.api';
-import { createChatbotApi, deleteChatbotApi, getMyChatbotsApi } from '../../api/chatbot.api';
+import { createChatbotApi, deleteChatbotApi, getMyChatbotsApi, updateChatbotApi } from '../../api/chatbot.api';
 import { deleteClientUserApi, getUsersByManagerApi } from '../../api/users.api';
 import { clearSession, getStoredSession } from '../../utils/authSession';
 import { mapChatbotFromApi } from '../../utils/mapChatbot';
@@ -99,8 +99,22 @@ export function UserProvider({ children }) {
     }
   };
 
-  const updateChatbot = (botId, updatedBot) => {
-    setChatbots((prev) => prev.map((b) => (b.id === botId ? { ...b, ...updatedBot } : b)));
+  const updateChatbot = async (botId, formData) => {
+    try {
+      const response = await updateChatbotApi(botId, formData);
+      const mapped = mapChatbotFromApi(response.data);
+      setChatbots((prev) => prev.map((b) => (b.id === botId ? mapped : b)));
+      return {
+        success: true,
+        chatbot: mapped,
+        message: response.message || 'Chatbot updated successfully!',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message || 'Failed to update chatbot. No changes were applied.',
+      };
+    }
   };
 
   const deleteChatbot = async (botId, name) => {

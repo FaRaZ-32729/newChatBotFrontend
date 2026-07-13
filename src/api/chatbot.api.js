@@ -7,6 +7,13 @@ export function createChatbotApi(formData) {
   });
 }
 
+export function updateChatbotApi(id, formData) {
+  return apiRequest(`/chatbot/update/${id}`, {
+    method: 'PUT',
+    body: formData,
+  });
+}
+
 export function getMyChatbotsApi() {
   return apiRequest('/chatbot/my');
 }

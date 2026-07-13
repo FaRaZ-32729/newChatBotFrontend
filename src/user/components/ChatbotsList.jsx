@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  Bot, ExternalLink, Edit2, Trash2, Plus, Copy, Check
+  Bot, ExternalLink, Edit2, Trash2, Plus, Copy, Check, Users
 } from 'lucide-react';
 
 export default function ChatbotsList({
@@ -124,38 +125,48 @@ export default function ChatbotsList({
                 )}
               </div>
 
-              <div className="mt-5 pt-4 border-t border-slate-800/60 flex items-center gap-2.5">
-                <a
-                  href={`/chatbot/${chatbot.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-2xl text-xs shadow-md shadow-indigo-600/15 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
+              <div className="mt-5 pt-4 border-t border-slate-800/60 flex flex-col gap-2.5">
+                <div className="flex items-center gap-2.5">
+                  <a
+                    href={`/chatbot/${chatbot.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-2xl text-xs shadow-md shadow-indigo-600/15 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Open Chatbot</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+
+                  {canManage && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onStartEditBot(chatbot)}
+                        className="p-3 bg-slate-950 hover:bg-indigo-500/10 text-slate-400 hover:text-indigo-400 border border-slate-800 hover:border-indigo-500/20 rounded-2xl transition-all cursor-pointer"
+                        title="Edit Chatbot"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onDeleteBot(chatbot)}
+                        className="p-3 bg-slate-950 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/20 rounded-2xl transition-all cursor-pointer"
+                        title="Delete Chatbot"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <Link
+                  to={`/chatbot/${chatbot.id}/leads`}
+                  className="w-full py-2.5 px-4 bg-slate-950 hover:bg-emerald-500/10 text-slate-300 hover:text-emerald-300 border border-slate-800 hover:border-emerald-500/25 font-bold rounded-2xl text-xs transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <span>Open Chatbot</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-
-                {canManage && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => onStartEditBot(chatbot)}
-                      className="p-3 bg-slate-950 hover:bg-indigo-500/10 text-slate-400 hover:text-indigo-400 border border-slate-800 hover:border-indigo-500/20 rounded-2xl transition-all cursor-pointer"
-                      title="Edit Chatbot"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => onDeleteBot(chatbot)}
-                      className="p-3 bg-slate-950 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/20 rounded-2xl transition-all cursor-pointer"
-                      title="Delete Chatbot"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
+                  <Users className="w-3.5 h-3.5" />
+                  <span>View Leads</span>
+                </Link>
               </div>
             </div>
           ))}

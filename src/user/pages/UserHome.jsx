@@ -55,8 +55,12 @@ export default function UserHome() {
   const myChatbots = chatbots || [];
   const managedUsers = users || [];
 
-  const hasHeadMovement = currentUser.access?.includes('Head Movement');
-  const hasHandMovement = currentUser.access?.includes('Hand Movement');
+  const hasHeadMovement = (currentUser.access || []).some(
+    (a) => String(a).toLowerCase() === 'head movement'
+  );
+  const hasHandMovement = (currentUser.access || []).some(
+    (a) => String(a).toLowerCase() === 'hand movement'
+  );
 
   const showToast = (msg) => {
     setToast(msg);
